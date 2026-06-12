@@ -70,6 +70,7 @@
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(226, 183, 20, 0.4); }
         .btn-success { background: linear-gradient(135deg, var(--green), #00a884); color: white; }
         .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-danger { background: linear-gradient(135deg, var(--red), #c0392b); color: white; }
         .btn-small { padding: 0.4rem 1rem; font-size: 0.8rem; }
         .btn-group { display: flex; gap: 0.7rem; flex-wrap: wrap; }
         .match-row {
@@ -122,10 +123,12 @@
         .toast {
             position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 12px;
             font-weight: 600; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.4s ease;
+            max-width: 400px;
         }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast-success { background: var(--green); color: white; }
         .toast-error { background: var(--red); color: white; }
+        .toast-info { background: var(--info); color: white; }
         .group-title {
             font-size: 1rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px;
             margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--gold);
@@ -142,6 +145,14 @@
             background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #85c1e9;
             padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
         }
+        .debug-log {
+            background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px;
+            padding: 1rem; margin-top: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem;
+            max-height: 200px; overflow-y: auto; color: var(--text-muted);
+        }
+        .debug-log .success { color: var(--green); }
+        .debug-log .error { color: var(--red); }
+        .debug-log .info { color: #3498db; }
         .player-header {
             background: linear-gradient(135deg, var(--accent), var(--secondary));
             padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;
@@ -201,6 +212,9 @@
                 </label>
                 <input type="file" id="matchesFile" accept=".xlsx,.xls,.csv" onchange="loadMatchesFile(event)">
                 <div id="matchesList" style="margin-top: 1rem;"></div>
+                
+                <div class="debug-log" id="debugLog" style="display:none;"></div>
+                <button class="btn btn-info btn-small" onclick="toggleDebugLog()" style="margin-top: 0.5rem;">🔍 Ver/Ocultar Logs de Depuración</button>
             </div>
 
             <div class="card">
@@ -306,12 +320,35 @@
         let state = {
             players: ['Juan', 'Ricardo', 'Willy'],
             matches: [],
-            predictions: {}, // { player: { roundId: { matchName: {g1, g2} } } }
+            predictions: {},
             realResults: {},
             scores: {},
             groupStandings: {},
             resultsCalculated: false
         };
+
+        // ==================== DEBUG LOG ====================
+        let debugMessages = [];
+        function addDebug(msg, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            debugMessages.push({ msg, type, timestamp });
+            updateDebugLog();
+        }
+        
+        function updateDebugLog() {
+            const logEl = document.getElementById('debugLog');
+            if (logEl) {
+                logEl.innerHTML = debugMessages.map(d => 
+                    `<div class="${d.type}">[${d.timestamp}] ${d.msg}</div>`
+                ).join('');
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+        }
+        
+        function toggleDebugLog() {
+            const logEl = document.getElementById('debugLog');
+            logEl.style.display = logEl.style.display === 'none' ? 'block' : 'none';
+        }
 
         // ==================== CONEXIÓN CON RENDER/TURSO ====================
         async function saveToCloud() {
@@ -351,94 +388,227 @@
             return null;
         }
 
-        // ==================== LECTURA DEL FIXTURE.XLSX ====================
+        // ==================== LECTOR INTELIGENTE DE EXCEL ====================
+        function parseFixtureData(data) {
+            addDebug(`📊 Archivo leído. Total de filas: ${data.length}`, 'info');
+            
+            // Mostrar las primeras 5 filas para depuración
+            for (let i = 0; i < Math.min(5, data.length); i++) {
+                addDebug(`Fila ${i}: ${JSON.stringify(data[i])}`, 'info');
+            }
+            
+            // Buscar la fila de encabezados
+            let headerRowIndex = -1;
+            let columnMapping = {};
+            
+            for (let i = 0; i < Math.min(10, data.length); i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+                
+                // Buscar encabezados conocidos
+                const rowStr = row.map(c => String(c || '').toLowerCase().trim()).join('|');
+                
+                if (rowStr.includes('partido') && rowStr.includes('equipo')) {
+                    headerRowIndex = i;
+                    addDebug(`✅ Encabezados encontrados en fila ${i}`, 'success');
+                    
+                    // Mapear columnas
+                    row.forEach((cell, idx) => {
+                        const cellStr = String(cell || '').toLowerCase().trim();
+                        if (cellStr === 'partido') columnMapping.id = idx;
+                        else if (cellStr === 'equipo 1') columnMapping.team1 = idx;
+                        else if (cellStr === 'equipo 2') columnMapping.team2 = idx;
+                        else if (cellStr === 'fase') columnMapping.phase = idx;
+                    });
+                    
+                    addDebug(`Mapeo de columnas: ${JSON.stringify(columnMapping)}`, 'info');
+                    break;
+                }
+            }
+            
+            if (headerRowIndex === -1) {
+                addDebug('❌ No se encontraron encabezados válidos', 'error');
+                return [];
+            }
+            
+            // Si no se encontraron columnas específicas, usar posiciones por defecto
+            if (columnMapping.id === undefined) columnMapping.id = 0;
+            if (columnMapping.team1 === undefined) columnMapping.team1 = 1;
+            if (columnMapping.team2 === undefined) columnMapping.team2 = 4;
+            if (columnMapping.phase === undefined) columnMapping.phase = 8;
+            
+            // Procesar datos desde la fila siguiente a los encabezados
+            const matches = [];
+            let processedCount = 0;
+            let skippedCount = 0;
+            
+            for (let i = headerRowIndex + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Saltar filas de separadores (que contienen "---")
+                const rowStr = row.map(c => String(c || '')).join('');
+                if (rowStr.includes('---')) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                const id = parseInt(row[columnMapping.id]);
+                const team1 = row[columnMapping.team1] ? String(row[columnMapping.team1]).trim() : '';
+                const team2 = row[columnMapping.team2] ? String(row[columnMapping.team2]).trim() : '';
+                const phase = row[columnMapping.phase] ? String(row[columnMapping.phase]).trim() : '';
+                
+                // Validar que sea un partido válido
+                if (isNaN(id) || !team1 || !team2) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                const matchName = `${team1} vs ${team2}`;
+                const round = getRoundByMatchId(id);
+                
+                matches.push({
+                    id,
+                    name: matchName,
+                    team1,
+                    team2,
+                    group: phase,
+                    roundId: round ? round.id : 'unknown',
+                    roundName: round ? round.name : 'Desconocida'
+                });
+                processedCount++;
+            }
+            
+            addDebug(`✅ Partidos procesados: ${processedCount}`, 'success');
+            addDebug(`⏭️ Filas saltadas: ${skippedCount}`, 'info');
+            
+            return matches;
+        }
+
+        // ==================== CARGA AUTOMÁTICA ====================
         async function loadFixtureAutomatically() {
-            if (state.matches.length > 0) return;
+            if (state.matches.length > 0) {
+                addDebug('ℹ️ Ya hay partidos cargados, omitiendo carga automática', 'info');
+                return;
+            }
+            
+            addDebug('🔄 Intentando cargar Fixture.xlsx automáticamente...', 'info');
             
             try {
-                const response = await fetch('Fixture.xlsx');
-                if (!response.ok) throw new Error('No se encontró Fixture.xlsx');
+                // Intentar diferentes rutas
+                const paths = ['Fixture.xlsx', './Fixture.xlsx', '/Fixture.xlsx'];
+                let response = null;
+                let usedPath = '';
                 
-                const arrayBuffer = await response.arrayBuffer();
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-                let count = 0;
-                for (let i = 1; i < data.length; i++) {
-                    const row = data[i];
-                    const id = parseInt(row[0]);
-                    const team1 = row[1] ? row[1].toString().trim() : '';
-                    const team2 = row[4] ? row[4].toString().trim() : '';
-                    const phase = row[8] ? row[8].toString().trim() : '';
-
-                    if (id && team1 && team2) {
-                        const matchName = `${team1} vs ${team2}`;
-                        const round = getRoundByMatchId(id);
-                        if (!state.matches.find(m => m.id === id)) {
-                            state.matches.push({ 
-                                id, 
-                                name: matchName, 
-                                team1, 
-                                team2, 
-                                group: phase,
-                                roundId: round ? round.id : 'unknown',
-                                roundName: round ? round.name : 'Desconocida'
-                            });
-                            count++;
+                for (const path of paths) {
+                    try {
+                        addDebug(`Intentando ruta: ${path}`, 'info');
+                        response = await fetch(path);
+                        if (response.ok) {
+                            usedPath = path;
+                            addDebug(`✅ Archivo encontrado en: ${path}`, 'success');
+                            break;
                         }
+                    } catch (e) {
+                        addDebug(`❌ Ruta ${path} falló: ${e.message}`, 'error');
                     }
                 }
                 
-                state.matches.sort((a, b) => a.id - b.id);
-                document.getElementById('matchesFileName').textContent = `✅ Fixture.xlsx cargado automáticamente (${count} partidos)`;
+                if (!response || !response.ok) {
+                    throw new Error('No se pudo acceder al archivo Fixture.xlsx en ninguna ruta');
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                addDebug(`📦 Tamaño del archivo: ${arrayBuffer.byteLength} bytes`, 'info');
+                
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                addDebug(`📑 Hojas encontradas: ${workbook.SheetNames.join(', ')}`, 'info');
+                
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                
+                const matches = parseFixtureData(data);
+                
+                if (matches.length === 0) {
+                    throw new Error('No se encontraron partidos válidos en el archivo');
+                }
+                
+                // Ordenar por ID
+                matches.sort((a, b) => a.id - b.id);
+                
+                // Eliminar duplicados
+                const uniqueMatches = [];
+                const seenIds = new Set();
+                matches.forEach(m => {
+                    if (!seenIds.has(m.id)) {
+                        seenIds.add(m.id);
+                        uniqueMatches.push(m);
+                    }
+                });
+                
+                state.matches = uniqueMatches;
+                
+                document.getElementById('matchesFileName').textContent = `✅ Fixture.xlsx cargado (${uniqueMatches.length} partidos)`;
                 document.getElementById('matchesFileUpload').classList.add('has-file');
                 renderMatchesList();
                 renderPredictionsUploads();
-                showToast('Calendario cargado automáticamente', 'success');
+                showToast(`Calendario cargado: ${uniqueMatches.length} partidos`, 'success');
+                
             } catch (error) {
-                console.warn('Carga automática falló. Usa el botón manual.', error);
-                document.getElementById('matchesFileName').textContent = '⚠️ Usa el botón de arriba para subirlo manualmente.';
+                addDebug(`❌ Error en carga automática: ${error.message}`, 'error');
+                document.getElementById('matchesFileName').textContent = '⚠️ Carga automática falló. Usa el botón de arriba.';
+                showToast('Usa el botón para subir el archivo manualmente', 'error');
             }
         }
 
+        // ==================== CARGA MANUAL ====================
         function loadMatchesFile(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            addDebug(`📁 Archivo seleccionado: ${file.name} (${file.size} bytes)`, 'info');
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    addDebug(`📑 Hojas: ${workbook.SheetNames.join(', ')}`, 'info');
+                    
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    let count = 0;
-                    for (let i = 1; i < data.length; i++) {
-                        const row = data[i];
-                        const id = parseInt(row[0]);
-                        const team1 = row[1] ? row[1].toString().trim() : '';
-                        const team2 = row[4] ? row[4].toString().trim() : '';
-                        const phase = row[8] ? row[8].toString().trim() : '';
-                        if (id && team1 && team2) {
-                            const matchName = `${team1} vs ${team2}`;
-                            const round = getRoundByMatchId(id);
-                            if (!state.matches.find(m => m.id === id)) {
-                                state.matches.push({ 
-                                    id, name: matchName, team1, team2, group: phase,
-                                    roundId: round ? round.id : 'unknown',
-                                    roundName: round ? round.name : 'Desconocida'
-                                });
-                                count++;
-                            }
-                        }
+                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    
+                    const matches = parseFixtureData(data);
+                    
+                    if (matches.length === 0) {
+                        showToast('No se encontraron partidos válidos', 'error');
+                        return;
                     }
-                    state.matches.sort((a, b) => a.id - b.id);
-                    document.getElementById('matchesFileName').textContent = `✅ ${file.name} (${count} partidos)`;
+                    
+                    matches.sort((a, b) => a.id - b.id);
+                    
+                    const uniqueMatches = [];
+                    const seenIds = new Set();
+                    matches.forEach(m => {
+                        if (!seenIds.has(m.id)) {
+                            seenIds.add(m.id);
+                            uniqueMatches.push(m);
+                        }
+                    });
+                    
+                    state.matches = uniqueMatches;
+                    
+                    document.getElementById('matchesFileName').textContent = `✅ ${file.name} (${uniqueMatches.length} partidos)`;
                     document.getElementById('matchesFileUpload').classList.add('has-file');
                     renderMatchesList();
                     renderPredictionsUploads();
                     saveToCloud();
-                    showToast(`${count} partidos cargados`, 'success');
+                    showToast(`${uniqueMatches.length} partidos cargados`, 'success');
+                    
                 } catch (err) {
+                    addDebug(`❌ Error al leer: ${err.message}`, 'error');
                     showToast('Error al leer el archivo', 'error');
                 }
             };
@@ -447,7 +617,10 @@
 
         function renderMatchesList() {
             const container = document.getElementById('matchesList');
-            if (state.matches.length === 0) return;
+            if (state.matches.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
             
             let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">';
             ROUNDS.forEach(round => {
@@ -533,7 +706,7 @@
                     let count = 0;
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
-                        if (row[0]) {
+                        if (row && row[0]) {
                             const matchName = row[0].toString().trim();
                             const g1 = parseInt(row[1]);
                             const g2 = parseInt(row[2]);
@@ -670,7 +843,6 @@
             state.players.forEach(player => {
                 state.scores[player] = { exact: 0, diff: 0, winner: 0, fail: 0, total: 0, details: [] };
                 matchesWithResult.forEach(m => {
-                    // Buscar pronóstico en la ronda correspondiente
                     const pred = state.predictions[player] && 
                                 state.predictions[player][m.roundId] && 
                                 state.predictions[player][m.roundId][m.name];
