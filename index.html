@@ -1,1 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Quiniela Mundial - Juan, Ricardo y Willy</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #1a1a2e; --secondary: #16213e; --accent: #0f3460;
+            --gold: #e2b714; --gold-dark: #c9a20f; --green: #00b894;
+            --red: #e74c3c; --text: #ffffff; --text-muted: #a0a0b0;
+            --card-bg: #1e2a45; --border: #2a3a5c;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--primary); color: var(--text); min-height: 100vh;
+            background-image: radial-gradient(ellipse at top left, rgba(15, 52, 96, 0.6) 0%, transparent 50%),
+                              radial-gradient(ellipse at bottom right, rgba(226, 183, 20, 0.1) 0%, transparent 50%);
+        }
+        .header {
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            padding: 1.5rem 2rem; border-bottom: 3px solid var(--gold); text-align: center;
+        }
+        .header h1 { font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+        .header p { color: var(--gold); margin-top: 0.3rem; font-size: 1rem; }
+        .nav-tabs {
+            display: flex; justify-content: center; gap: 0.5rem; padding: 1rem;
+            background: rgba(0,0,0,0.2); flex-wrap: wrap;
+        }
+        .nav-tab {
+            padding: 0.7rem 1.2rem; border: 2px solid var(--border); background: transparent;
+            color: var(--text-muted); border-radius: 50px; cursor: pointer; font-size: 0.9rem;
+            font-weight: 600; transition: all 0.3s ease;
+        }
+        .nav-tab:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
+        .nav-tab.active { background: var(--gold); color: var(--primary); border-color: var(--gold); }
+        .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .section { display: none; animation: fadeIn 0.4s ease; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .card {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+            padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .card-title .icon { font-size: 1.4rem; }
+        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 0.7rem 1rem; border: 2px solid var(--border); border-radius: 10px;
+            background: rgba(0,0,0,0.3); color: var(--text); font-size: 1rem; transition: border-color 0.3s;
+        }
+        input:focus { outline: none; border-color: var(--gold); }
+        input[type="file"] { display: none; }
+        .file-upload {
+            border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; text-align: center;
+            cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.15);
+        }
+        .file-upload:hover { border-color: var(--gold); background: rgba(226, 183, 20, 0.05); }
+        .file-upload.has-file { border-color: var(--green); background: rgba(46, 204, 113, 0.08); }
+        .file-upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .file-upload-text { color: var(--text-muted); font-size: 0.9rem; }
+        .file-upload-name { color: var(--green); font-weight: 700; margin-top: 0.3rem; }
+        .btn {
+            padding: 0.75rem 2rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+            cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: var(--primary); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(226, 183, 20, 0.4); }
+        .btn-success { background: linear-gradient(135deg, var(--green), #00a884); color: white; }
+        .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-small { padding: 0.4rem 1rem; font-size: 0.8rem; }
+        .btn-group { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+        .match-row {
+            display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center;
+            padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.15); margin-bottom: 0.5rem;
+        }
+        .match-team { font-weight: 600; font-size: 0.9rem; }
+        .match-team.home { text-align: right; }
+        .match-team.away { text-align: left; }
+        .match-vs { color: var(--gold); font-weight: 800; font-size: 0.8rem; padding: 0 0.8rem; }
+        .score-input {
+            width: 55px; text-align: center; padding: 0.5rem; border: 2px solid var(--border);
+            border-radius: 8px; background: rgba(0,0,0,0.4); color: var(--text); font-size: 1.1rem; font-weight: 700;
+        }
+        .score-input:focus { outline: none; border-color: var(--gold); }
+        .score-wrapper { display: flex; gap: 0.5rem; justify-content: center; align-items: center; }
+        .results-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        .results-table th {
+            background: rgba(0,0,0,0.4); padding: 0.8rem; text-align: center; font-weight: 700;
+            text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); border-bottom: 2px solid var(--gold);
+        }
+        .results-table td { padding: 0.6rem 0.8rem; text-align: center; border-bottom: 1px solid var(--border); }
+        .results-table .match-name { text-align: left; font-weight: 600; }
+        .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-exact { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+        .badge-diff { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+        .badge-winner { background: rgba(52, 152, 219, 0.2); color: #3498db; }
+        .badge-fail { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .ranking-item {
+            display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem 1.5rem; border-radius: 14px;
+            margin-bottom: 0.8rem; background: var(--card-bg); border: 2px solid var(--border); transition: all 0.3s;
+        }
+        .ranking-item.first-place { border-color: var(--gold); background: linear-gradient(135deg, rgba(226, 183, 20, 0.1), rgba(226, 183, 20, 0.02)); }
+        .ranking-item.second-place { border-color: #c0c0c0; }
+        .ranking-item.third-place { border-color: #cd7f32; }
+        .rank-number { font-size: 2rem; font-weight: 900; width: 50px; text-align: center; }
+        .rank-number.gold { color: var(--gold); }
+        .rank-number.silver { color: #c0c0c0; }
+        .rank-number.bronze { color: #cd7f32; }
+        .rank-info { flex: 1; }
+        .rank-name { font-size: 1.2rem; font-weight: 700; }
+        .rank-detail { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+        .rank-score { font-size: 1.8rem; font-weight: 900; color: var(--gold); }
+        .progress-bar { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 900; color: var(--gold); }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.2rem; }
+        .toast {
+            position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 12px;
+            font-weight: 600; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.4s ease;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast-success { background: var(--green); color: white; }
+        .toast-error { background: var(--red); color: white; }
+        .group-title {
+            font-size: 1rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px;
+            margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--gold);
+        }
+        .group-table-container { overflow-x: auto; margin-bottom: 2rem; border-radius: 12px; border: 1px solid var(--border); }
+        .group-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 600px; }
+        .group-table th { background: var(--accent); padding: 0.6rem; text-align: center; font-weight: 700; border-bottom: 2px solid var(--gold); }
+        .group-table th:first-child, .group-table td:first-child { text-align: left; padding-left: 1rem; }
+        .group-table td { padding: 0.6rem; text-align: center; border-bottom: 1px solid var(--border); }
+        .group-table tr:nth-child(even) { background: rgba(0,0,0,0.15); }
+        .group-table tr.top-2 { background: rgba(46, 204, 113, 0.1); border-left: 3px solid var(--green); }
+        .group-table tr.top-2 td:first-child { font-weight: 700; color: var(--green); }
+        .auto-load-hint {
+            background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #85c1e9;
+            padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.4rem; }
+            .container { padding: 1rem; }
+            .card { padding: 1.2rem; }
+            .nav-tab { padding: 0.5rem 0.8rem; font-size: 0.75rem; }
+            .match-row { grid-template-columns: 1fr; gap: 0.3rem; text-align: center; }
+            .match-team.home, .match-team.away { text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 Quiniela Mundial</h1>
+        <p>Juan • Ricardo • Willy</p>
+    </div>
 
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showSection('setup')">⚙️ Configuración</button>
+        <button class="nav-tab" onclick="showSection('predictions')">📝 Pronósticos</button>
+        <button class="nav-tab" onclick="showSection('realResults')">⚽ Resultados Reales</button>
+        <button class="nav-tab" onclick="showSection('standings')">📊 Tabla de Posiciones</button>
+        <button class="nav-tab" onclick="showSection('comparison')">🔍 Comparación</button>
+        <button class="nav-tab" onclick="showSection('ranking')">🏆 Ranking</button>
+    </div>
+
+    <div class="container">
+        <!-- SETUP SECTION -->
+        <div class="section active" id="section-setup">
+            <div class="card">
+                <div class="card-title"><span class="icon">📋</span> Calendario (Fixture)</div>
+                
+                <div class="auto-load-hint">
+                    💡 <strong>Consejo:</strong> La web intentará cargar <code>Fixture.xlsx</code> automáticamente al iniciar. 
+                    Si no lo logra (por seguridad del navegador al abrir el archivo directamente), usa el botón de abajo para subirlo manualmente.
+                </div>
+
+                <label class="file-upload" id="matchesFileUpload" onclick="document.getElementById('matchesFile').click()">
+                    <div class="file-upload-icon">📁</div>
+                    <div class="file-upload-text">Subir Fixture.xlsx manualmente (Respaldo)</div>
+                    <div class="file-upload-name" id="matchesFileName"></div>
+                </label>
+                <input type="file" id="matchesFile" accept=".xlsx,.xls,.csv" onchange="loadMatchesFile(event)">
+                
+                <div id="matchesList" style="margin-top: 1rem;"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="icon">📏</span> Reglas de Puntuación</div>
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
+                        <span style="flex:1; font-weight:600;">🎯 Resultado Exacto</span>
+                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar marcador exacto</span>
+                        <input type="number" id="ruleExact" value="3" min="0" max="10" style="width:60px; text-align:center;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
+                        <span style="flex:1; font-weight:600;">📊 Diferencia de Goles</span>
+                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar ganador y diferencia</span>
+                        <input type="number" id="ruleDiff" value="2" min="0" max="10" style="width:60px; text-align:center;">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
+                        <span style="flex:1; font-weight:600;">✅ Solo Ganador</span>
+                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar quién gana (o empate)</span>
+                        <input type="number" id="ruleWinner" value="1" min="0" max="10" style="width:60px; text-align:center;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PREDICTIONS SECTION -->
+        <div class="section" id="section-predictions">
+            <div class="card">
+                <div class="card-title"><span class="icon">📝</span> Subir Pronósticos</div>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Cada hermano descarga la plantilla, la llena con sus goles y la sube.
+                </p>
+                <button class="btn btn-info btn-small" onclick="downloadPredictionTemplate()" style="margin-bottom: 1rem;">📥 Descargar Plantilla de Pronósticos</button>
+                <div id="predictionsUploads"></div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span class="icon">📊</span> Vista Rápida</div>
+                <div id="predictionsSummary"></div>
+            </div>
+        </div>
+
+        <!-- REAL RESULTS SECTION -->
+        <div class="section" id="section-realResults">
+            <div class="card">
+                <div class="card-title"><span class="icon">⚽</span> Ingresar Resultados Reales</div>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Ingresa los marcadores reales. Esto alimentará automáticamente las Tablas de Posiciones y el Ranking.
+                </p>
+                <div id="realResultsInputs"></div>
+                <div class="btn-group" style="margin-top: 1.5rem;">
+                    <button class="btn btn-success" onclick="calculateAll()">🧮 Calcular Tablas y Resultados</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STANDINGS SECTION -->
+        <div class="section" id="section-standings">
+            <div class="card">
+                <div class="card-title"><span class="icon">📊</span> Tablas de Posiciones por Grupo</div>
+                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Se generan automáticamente al calcular los resultados reales de los partidos 1 al 72.
+                    <span style="color: var(--green); font-weight: 700;">(Verde = Zona de Clasificación)</span>
+                </p>
+                <div id="standingsContainer">
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados. Ve a "Resultados Reales" e ingresa los marcadores.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPARISON SECTION -->
+        <div class="section" id="section-comparison">
+            <div class="card">
+                <div class="card-title"><span class="icon">🔍</span> Comparación Detallada</div>
+                <div class="stats-grid" id="comparisonStats"></div>
+                <div id="comparisonDetail"></div>
+            </div>
+        </div>
+
+        <!-- RANKING SECTION -->
+        <div class="section" id="section-ranking">
+            <div class="card">
+                <div class="card-title"><span class="icon">🏆</span> Ranking Final</div>
+                <div id="rankingContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== STATE ====================
+        let state = {
+            players: ['Juan', 'Ricardo', 'Willy'],
+            matches: [],
+            predictions: {},
+            realResults: {},
+            scores: {},
+            groupStandings: {},
+            resultsCalculated: false
+        };
+
+        // ==================== INIT ====================
+        function init() {
+            renderPredictionsUploads();
+            // Intentar carga automática al iniciar
+            loadFixtureAutomatically();
+        }
+
+        // ==================== AUTO LOAD FIXTURE ====================
+        async function loadFixtureAutomatically() {
+            try {
+                const response = await fetch('Fixture.xlsx');
+                if (!response.ok) throw new Error('Archivo no encontrado');
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                let count = 0;
+                for (let i = 1; i < data.length; i++) {
+                    const row = data[i];
+                    const id = parseInt(row[0]);
+                    const team1 = row[1] ? row[1].toString().trim() : '';
+                    const team2 = row[4] ? row[4].toString().trim() : ''; // Columna E
+                    const phase = row[8] ? row[8].toString().trim() : '';  // Columna I
+
+                    if (id && team1 && team2) {
+                        const matchName = `${team1} vs ${team2}`;
+                        if (!state.matches.find(m => m.id === id)) {
+                            state.matches.push({ id, name: matchName, team1, team2, group: phase });
+                            count++;
+                        }
+                    }
+                }
+                
+                state.matches.sort((a, b) => a.id - b.id);
+                document.getElementById('matchesFileName').textContent = `✅ Fixture.xlsx cargado automáticamente (${count} partidos)`;
+                document.getElementById('matchesFileUpload').classList.add('has-file');
+                renderMatchesList();
+                renderPredictionsUploads();
+                showToast('Calendario cargado automáticamente', 'success');
+            } catch (error) {
+                console.warn('Carga automática falló (normal si se abrió con doble clic).', error);
+                document.getElementById('matchesFileName').textContent = '⚠️ No se pudo cargar automáticamente. Usa el botón de arriba.';
+            }
+        }
+
+        // ==================== MANUAL LOAD (FALLBACK) ====================
+        function loadMatchesFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    let count = 0;
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        const id = parseInt(row[0]);
+                        const team1 = row[1] ? row[1].toString().trim() : '';
+                        const team2 = row[4] ? row[4].toString().trim() : '';
+                        const phase = row[8] ? row[8].toString().trim() : '';
+
+                        if (id && team1 && team2) {
+                            const matchName = `${team1} vs ${team2}`;
+                            if (!state.matches.find(m => m.id === id)) {
+                                state.matches.push({ id, name: matchName, team1, team2, group: phase });
+                                count++;
+                            }
+                        }
+                    }
+                    state.matches.sort((a, b) => a.id - b.id);
+                    document.getElementById('matchesFileName').textContent = `✅ ${file.name} (${count} partidos)`;
+                    document.getElementById('matchesFileUpload').classList.add('has-file');
+                    renderMatchesList();
+                    renderPredictionsUploads();
+                    showToast(`${count} partidos cargados exitosamente`, 'success');
+                } catch (err) {
+                    showToast('Error al leer el archivo.', 'error');
+                }
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function renderMatchesList() {
+            const container = document.getElementById('matchesList');
+            if (state.matches.length === 0) return;
+            
+            const phases = {};
+            state.matches.forEach(m => {
+                if (!phases[m.group]) phases[m.group] = 0;
+                phases[m.group]++;
+            });
+
+            container.innerHTML = `
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                    ${Object.entries(phases).map(([phase, count]) => `
+                        <span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">
+                            ${phase}: ${count}
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // ==================== PREDICTIONS ====================
+        function renderPredictionsUploads() {
+            const container = document.getElementById('predictionsUploads');
+            container.innerHTML = state.players.map(player => `
+                <div class="card" style="margin-bottom: 1rem; padding: 1.2rem;">
+                    <div class="card-title"><span class="icon">👤</span> ${player}</div>
+                    <label class="file-upload" id="upload-${sanitizeId(player)}" onclick="document.getElementById('file-${sanitizeId(player)}').click()">
+                        <div class="file-upload-icon">📤</div>
+                        <div class="file-upload-text">Subir pronóstico de ${player}</div>
+                        <div class="file-upload-name" id="filename-${sanitizeId(player)}">${getPredictionStatus(player)}</div>
+                    </label>
+                    <input type="file" id="file-${sanitizeId(player)}" accept=".xlsx,.xls,.csv" onchange="loadPrediction(event, '${player}')">
+                </div>
+            `).join('');
+            renderPredictionsSummary();
+        }
+
+        function getPredictionStatus(player) {
+            if (state.predictions[player] && Object.keys(state.predictions[player]).length > 0) {
+                return `✅ ${Object.keys(state.predictions[player]).length} partidos`;
+            }
+            return 'Sin pronóstico aún';
+        }
+
+        function loadPrediction(event, player) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    state.predictions[player] = {};
+                    let count = 0;
+
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (row[0]) {
+                            const matchName = row[0].toString().trim();
+                            const g1 = parseInt(row[1]);
+                            const g2 = parseInt(row[2]);
+                            if (!isNaN(g1) && !isNaN(g2)) {
+                                state.predictions[player][matchName] = { g1, g2 };
+                                count++;
+                            }
+                        }
+                    }
+
+                    const uploadEl = document.getElementById('upload-' + sanitizeId(player));
+                    const filenameEl = document.getElementById('filename-' + sanitizeId(player));
+                    if (uploadEl) uploadEl.classList.add('has-file');
+                    if (filenameEl) filenameEl.textContent = `✅ ${file.name} (${count} partidos)`;
+
+                    renderPredictionsSummary();
+                    showToast(`${player}: ${count} pronósticos cargados`, 'success');
+                } catch (err) {
+                    showToast('Error al leer el archivo', 'error');
+                }
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function renderPredictionsSummary() {
+            const container = document.getElementById('predictionsSummary');
+            if (Object.keys(state.predictions).length === 0 || state.matches.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay datos para mostrar.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="overflow-x: auto;">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Partido</th>
+                                ${state.players.map(p => `<th>${p}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${state.matches.slice(0, 10).map(m => `
+                                <tr>
+                                    <td class="match-name">${m.name}</td>
+                                    ${state.players.map(p => {
+                                        const pred = state.predictions[p] && state.predictions[p][m.name];
+                                        return pred ? `<td><strong>${pred.g1}</strong> - <strong>${pred.g2}</strong></td>` : `<td style="color: var(--text-muted);">—</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ${state.matches.length > 10 ? `<p style="text-align:center; color: var(--text-muted); margin-top:0.5rem; font-size:0.8rem;">... y ${state.matches.length - 10} partidos más</p>` : ''}
+                </div>
+            `;
+        }
+
+        function downloadPredictionTemplate() {
+            if (state.matches.length === 0) {
+                showToast('Primero carga el Fixture.xlsx', 'error');
+                return;
+            }
+            const wsData = [['Partido', 'Goles Equipo 1', 'Goles Equipo 2']];
+            state.matches.forEach(m => wsData.push([m.name, '', '']));
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Pronósticos');
+            XLSX.writeFile(wb, 'plantilla_pronosticos.xlsx');
+            showToast('Plantilla descargada', 'success');
+        }
+
+        // ==================== REAL RESULTS ====================
+        function renderRealResultsInputs() {
+            const container = document.getElementById('realResultsInputs');
+            if (state.matches.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
+                return;
+            }
+
+            let html = '';
+            let currentPhase = '';
+
+            state.matches.forEach(m => {
+                if (m.group !== currentPhase) {
+                    currentPhase = m.group;
+                    html += `<div class="group-title" style="margin-top: 1.5rem;">${currentPhase}</div>`;
+                }
+
+                const real = state.realResults[m.name] || { g1: '', g2: '' };
+                html += `
+                    <div class="match-row">
+                        <span class="match-team home">${m.team1}</span>
+                        <div class="score-wrapper">
+                            <input type="number" class="score-input" min="0" max="20" value="${real.g1}" 
+                                onchange="updateRealResult('${m.name}', 'g1', this.value)">
+                            <span class="match-vs">VS</span>
+                            <input type="number" class="score-input" min="0" max="20" value="${real.g2}" 
+                                onchange="updateRealResult('${m.name}', 'g2', this.value)">
+                        </div>
+                        <span class="match-team away">${m.team2}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function updateRealResult(matchName, team, value) {
+            if (!state.realResults[matchName]) state.realResults[matchName] = { g1: '', g2: '' };
+            state.realResults[matchName][team] = value === '' ? '' : parseInt(value);
+        }
+
+        // ==================== CALCULATE ALL ====================
+        function calculateAll() {
+            const rules = getRules();
+            const matchesWithResult = state.matches.filter(m => {
+                const r = state.realResults[m.name];
+                return r && r.g1 !== '' && r.g2 !== '' && !isNaN(r.g1) && !isNaN(r.g2);
+            });
+
+            if (matchesWithResult.length === 0) {
+                showToast('Ingresa al menos un resultado real', 'error');
+                return;
+            }
+
+            calculateGroupStandings(matchesWithResult);
+
+            state.scores = {};
+            state.players.forEach(player => {
+                state.scores[player] = { exact: 0, diff: 0, winner: 0, fail: 0, total: 0, details: [] };
+                matchesWithResult.forEach(m => {
+                    const pred = state.predictions[player] && state.predictions[player][m.name];
+                    if (!pred || pred.g1 === undefined || pred.g2 === undefined) return;
+
+                    const real = state.realResults[m.name];
+                    const result = evaluatePrediction(pred.g1, pred.g2, real.g1, real.g2);
+
+                    let points = 0;
+                    if (result.type === 'exact') points = rules.exact;
+                    else if (result.type === 'diff') points = rules.diff;
+                    else if (result.type === 'winner') points = rules.winner;
+
+                    state.scores[player][result.type]++;
+                    state.scores[player].total += points;
+                    state.scores[player].details.push({
+                        match: m.name, group: m.group, prediction: `${pred.g1}-${pred.g2}`,
+                        real: `${real.g1}-${real.g2}`, type: result.type, points: points, description: result.description
+                    });
+                });
+            });
+
+            state.resultsCalculated = true;
+            showToast('¡Tablas y resultados calculados!', 'success');
+            showSection('standings');
+        }
+
+        function calculateGroupStandings(validMatches) {
+            const groups = {};
+            'ABCDEFGHIJKL'.split('').forEach(g => groups[g] = {});
+
+            validMatches.forEach(m => {
+                if (m.id >= 1 && m.id <= 72) {
+                    const groupMatch = m.group.match(/Grupo\s+([A-L])/i);
+                    if (!groupMatch) return;
+                    const groupLetter = groupMatch[1].toUpperCase();
+
+                    const real = state.realResults[m.name];
+                    const g1 = parseInt(real.g1);
+                    const g2 = parseInt(real.g2);
+
+                    if (!groups[groupLetter][m.team1]) initTeam(groups[groupLetter], m.team1);
+                    if (!groups[groupLetter][m.team2]) initTeam(groups[groupLetter], m.team2);
+
+                    const t1 = groups[groupLetter][m.team1];
+                    const t2 = groups[groupLetter][m.team2];
+
+                    t1.pj++; t2.pj++;
+                    t1.gf += g1; t1.gc += g2;
+                    t2.gf += g2; t2.gc += g1;
+
+                    if (g1 > g2) { t1.pg++; t1.pts += 3; t2.pp++; } 
+                    else if (g1 < g2) { t2.pg++; t2.pts += 3; t1.pp++; } 
+                    else { t1.pe++; t1.pts += 1; t2.pe++; t2.pts += 1; }
+                }
+            });
+
+            for (let g in groups) {
+                groups[g] = Object.values(groups[g]).sort((a, b) => {
+                    if (b.pts !== a.pts) return b.pts - a.pts;
+                    const dgA = a.gf - a.gc;
+                    const dgB = b.gf - b.gc;
+                    if (dgB !== dgA) return dgB - dgA;
+                    return b.gf - a.gf;
+                });
+            }
+            state.groupStandings = groups;
+        }
+
+        function initTeam(groupObj, teamName) {
+            groupObj[teamName] = { name: teamName, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, pts: 0 };
+        }
+
+        function evaluatePrediction(pg1, pg2, rg1, rg2) {
+            if (pg1 === rg1 && pg2 === rg2) return { type: 'exact', description: '¡Exacto!' };
+            const pWinner = pg1 > pg2 ? 'home' : pg1 < pg2 ? 'away' : 'draw';
+            const rWinner = rg1 > rg2 ? 'home' : rg1 < rg2 ? 'away' : 'draw';
+            if (pWinner === rWinner) {
+                if (Math.abs(pg1 - pg2) === Math.abs(rg1 - rg2) && Math.abs(pg1 - pg2) > 0) {
+                    return { type: 'diff', description: 'Ganador + Diferencia' };
+                }
+                return { type: 'winner', description: 'Solo Ganador' };
+            }
+            return { type: 'fail', description: 'Falló' };
+        }
+
+        function getRules() {
+            return {
+                exact: parseInt(document.getElementById('ruleExact').value) || 3,
+                diff: parseInt(document.getElementById('ruleDiff').value) || 2,
+                winner: parseInt(document.getElementById('ruleWinner').value) || 1
+            };
+        }
+
+        // ==================== RENDER SECTIONS ====================
+        function renderStandings() {
+            const container = document.getElementById('standingsContainer');
+            if (!state.resultsCalculated || Object.keys(state.groupStandings).length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados.</p>';
+                return;
+            }
+
+            let html = '';
+            'ABCDEFGHIJKL'.split('').forEach(g => {
+                const teams = state.groupStandings[g];
+                if (Object.keys(teams).length === 0) return;
+
+                html += `<div class="group-title">🏆 Grupo ${g}</div>`;
+                html += `<div class="group-table-container"><table class="group-table">
+                    <thead><tr><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th></tr></thead><tbody>`;
+                
+                teams.forEach((t, index) => {
+                    const dg = t.gf - t.gc;
+                    const dgStr = dg > 0 ? `+${dg}` : dg;
+                    html += `<tr class="${index < 2 ? 'top-2' : ''}">
+                        <td>${index + 1}. ${t.name}</td><td>${t.pj}</td><td>${t.pg}</td><td>${t.pe}</td>
+                        <td>${t.pp}</td><td>${t.gf}</td><td>${t.gc}</td><td>${dgStr}</td>
+                        <td style="font-weight: 900; color: var(--gold);">${t.pts}</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+            });
+            container.innerHTML = html || '<p style="text-align:center; color: var(--text-muted);">No hay datos de fase de grupos aún.</p>';
+        }
+
+        function renderComparison() {
+            const statsContainer = document.getElementById('comparisonStats');
+            const detailContainer = document.getElementById('comparisonDetail');
+            if (!state.resultsCalculated) {
+                detailContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
+                return;
+            }
+
+            const totalMatches = Object.keys(state.realResults).filter(m => {
+                const r = state.realResults[m];
+                return r && r.g1 !== '' && r.g2 !== '' && !isNaN(r.g1) && !isNaN(r.g2);
+            }).length;
+
+            let maxScore = 0, maxPlayer = '';
+            Object.keys(state.scores).forEach(p => {
+                if (state.scores[p].total > maxScore) { maxScore = state.scores[p].total; maxPlayer = p; }
+            });
+
+            statsContainer.innerHTML = `
+                <div class="stat-card"><div class="stat-value">${totalMatches}</div><div class="stat-label">Partidos evaluados</div></div>
+                <div class="stat-card"><div class="stat-value">${state.players.length}</div><div class="stat-label">Jugadores</div></div>
+                <div class="stat-card"><div class="stat-value">${maxScore}</div><div class="stat-label">Mejor puntaje</div></div>
+                <div class="stat-card"><div class="stat-value">${maxPlayer}</div><div class="stat-label">Líder</div></div>
+            `;
+
+            detailContainer.innerHTML = state.matches
+                .filter(m => state.realResults[m.name] && !isNaN(state.realResults[m.name].g1))
+                .map(m => {
+                    const real = state.realResults[m.name];
+                    return `
+                        <div class="card" style="padding: 1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; text-align: center; margin-bottom: 0.8rem;">
+                                ${m.name} <span style="color: var(--gold);">| Resultado: ${real.g1} - ${real.g2}</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                                ${state.players.map(p => {
+                                    const detail = state.scores[p].details.find(d => d.match === m.name);
+                                    if (!detail) return `<div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;"><div style="font-size:0.8rem; color:var(--text-muted);">${p}</div><div>—</div></div>`;
+                                    
+                                    let badgeClass = 'badge-fail';
+                                    if (detail.type === 'exact') badgeClass = 'badge-exact';
+                                    if (detail.type === 'diff') badgeClass = 'badge-diff';
+                                    if (detail.type === 'winner') badgeClass = 'badge-winner';
+
+                                    return `
+                                        <div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;">
+                                            <div style="font-size:0.8rem; color:var(--text-muted);">${p}</div>
+                                            <div style="font-weight:800; font-size:1.1rem;">${detail.prediction}</div>
+                                            <span class="badge ${badgeClass}" style="margin-top:0.3rem;">${detail.description}</span>
+                                            <div style="color:var(--gold); font-weight:700; margin-top:0.2rem;">+${detail.points} pts</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        function renderRanking() {
+            const container = document.getElementById('rankingContainer');
+            if (!state.resultsCalculated) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
+                return;
+            }
+
+            const sorted = [...state.players].sort((a, b) => state.scores[b].total - state.scores[a].total);
+            const rules = getRules();
+            const maxPossible = Object.keys(state.realResults).filter(m => {
+                const r = state.realResults[m];
+                return r && r.g1 !== '' && r.g2 !== '' && !isNaN(r.g1) && !isNaN(r.g2);
+            }).length * rules.exact;
+
+            container.innerHTML = sorted.map((player, i) => {
+                const score = state.scores[player];
+                const percentage = maxPossible > 0 ? Math.round((score.total / maxPossible) * 100) : 0;
+                const placeClass = i === 0 ? 'first-place' : i === 1 ? 'second-place' : 'third-place';
+                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : 'bronze';
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+
+                return `
+                    <div class="ranking-item ${placeClass}">
+                        <div class="rank-number ${rankClass}">${medal}</div>
+                        <div class="rank-info">
+                            <div class="rank-name">${player}</div>
+                            <div class="rank-detail">🎯 ${score.exact} exactos · 📊 ${score.diff} dif. · ✅ ${score.winner} ganadores · ❌ ${score.fail} fallos</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${percentage}%"></div></div>
+                        </div>
+                        <div class="rank-score">${score.total}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== UTILITIES ====================
+        function sanitizeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '_'); }
+        
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('section-' + name).classList.add('active');
+            event.target.classList.add('active');
+
+            if (name === 'realResults') renderRealResultsInputs();
+            if (name === 'standings') renderStandings();
+            if (name === 'comparison') renderComparison();
+            if (name === 'ranking') renderRanking();
+            if (name === 'predictions') renderPredictionsUploads();
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast-' + type + ' show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Iniciar
+        init();
+    </script>
+</body>
+</html>
