@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🏆 Quiniela Mundial - Juan, Ricardo y Willy</title>
+    <!-- Librería para leer Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -27,7 +28,7 @@
         .header p { color: var(--gold); margin-top: 0.3rem; font-size: 1rem; }
         .nav-tabs {
             display: flex; justify-content: center; gap: 0.5rem; padding: 1rem;
-            background: rgba(0,0,0,0.2); flex-wrap: wrap;
+            background: rgba(0,0,0,0.2); flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
         }
         .nav-tab {
             padding: 0.7rem 1.2rem; border: 2px solid var(--border); background: transparent;
@@ -172,19 +173,15 @@
         <div class="section active" id="section-setup">
             <div class="card">
                 <div class="card-title"><span class="icon">📋</span> Calendario (Fixture)</div>
-                
                 <div class="auto-load-hint">
-                    💡 <strong>Consejo:</strong> La web intentará cargar <code>Fixture.xlsx</code> automáticamente al iniciar. 
-                    Si no lo logra (por seguridad del navegador al abrir el archivo directamente), usa el botón de abajo para subirlo manualmente.
+                    💡 <strong>Automático:</strong> La web cargará <code>Fixture.xlsx</code> al iniciar. Si falla, usa el botón de respaldo.
                 </div>
-
                 <label class="file-upload" id="matchesFileUpload" onclick="document.getElementById('matchesFile').click()">
                     <div class="file-upload-icon">📁</div>
                     <div class="file-upload-text">Subir Fixture.xlsx manualmente (Respaldo)</div>
                     <div class="file-upload-name" id="matchesFileName"></div>
                 </label>
                 <input type="file" id="matchesFile" accept=".xlsx,.xls,.csv" onchange="loadMatchesFile(event)">
-                
                 <div id="matchesList" style="margin-top: 1rem;"></div>
             </div>
 
@@ -275,7 +272,7 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ==================== STATE ====================
+        // ==================== ESTADO GLOBAL ====================
         let state = {
             players: ['Juan', 'Ricardo', 'Willy'],
             matches: [],
@@ -286,18 +283,41 @@
             resultsCalculated: false
         };
 
-        // ==================== INIT ====================
-        function init() {
-            renderPredictionsUploads();
-            // Intentar carga automática al iniciar
-            loadFixtureAutomatically();
+        // ==================== CONEXIÓN CON RENDER/TURSO ====================
+        async function saveToCloud() {
+            try {
+                await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+            } catch (err) {
+                console.error('Error al guardar en la nube:', err);
+            }
         }
 
-        // ==================== AUTO LOAD FIXTURE ====================
+        async function loadFromCloud() {
+            try {
+                const response = await fetch('/api/load');
+                const data = await response.json();
+                if (data && Object.keys(data).length > 0) {
+                    state = { ...state, ...data };
+                    renderMatchesList();
+                    renderPredictionsUploads();
+                    showToast('✅ Datos sincronizados desde la base de datos', 'success');
+                }
+            } catch (err) {
+                console.error('Error al cargar de la nube:', err);
+            }
+        }
+
+        // ==================== LECTURA DEL FIXTURE.XLSX ====================
         async function loadFixtureAutomatically() {
+            if (state.matches.length > 0) return; // Ya está cargado desde la nube
+            
             try {
                 const response = await fetch('Fixture.xlsx');
-                if (!response.ok) throw new Error('Archivo no encontrado');
+                if (!response.ok) throw new Error('No se encontró Fixture.xlsx');
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -305,12 +325,13 @@
                 const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
                 let count = 0;
+                // Columnas exactas del Excel proporcionado: 0=ID, 1=Equipo1, 4=Equipo2, 8=Fase
                 for (let i = 1; i < data.length; i++) {
                     const row = data[i];
                     const id = parseInt(row[0]);
                     const team1 = row[1] ? row[1].toString().trim() : '';
-                    const team2 = row[4] ? row[4].toString().trim() : ''; // Columna E
-                    const phase = row[8] ? row[8].toString().trim() : '';  // Columna I
+                    const team2 = row[4] ? row[4].toString().trim() : '';
+                    const phase = row[8] ? row[8].toString().trim() : '';
 
                     if (id && team1 && team2) {
                         const matchName = `${team1} vs ${team2}`;
@@ -328,23 +349,20 @@
                 renderPredictionsUploads();
                 showToast('Calendario cargado automáticamente', 'success');
             } catch (error) {
-                console.warn('Carga automática falló (normal si se abrió con doble clic).', error);
-                document.getElementById('matchesFileName').textContent = '⚠️ No se pudo cargar automáticamente. Usa el botón de arriba.';
+                console.warn('Carga automática falló. Usa el botón manual.', error);
+                document.getElementById('matchesFileName').textContent = '⚠️ Usa el botón de arriba para subirlo manualmente.';
             }
         }
 
-        // ==================== MANUAL LOAD (FALLBACK) ====================
         function loadMatchesFile(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const workbook = XLSX.read(e.target.result, { type: 'binary' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
                     let count = 0;
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
@@ -352,7 +370,6 @@
                         const team1 = row[1] ? row[1].toString().trim() : '';
                         const team2 = row[4] ? row[4].toString().trim() : '';
                         const phase = row[8] ? row[8].toString().trim() : '';
-
                         if (id && team1 && team2) {
                             const matchName = `${team1} vs ${team2}`;
                             if (!state.matches.find(m => m.id === id)) {
@@ -366,9 +383,10 @@
                     document.getElementById('matchesFileUpload').classList.add('has-file');
                     renderMatchesList();
                     renderPredictionsUploads();
-                    showToast(`${count} partidos cargados exitosamente`, 'success');
+                    saveToCloud();
+                    showToast(`${count} partidos cargados`, 'success');
                 } catch (err) {
-                    showToast('Error al leer el archivo.', 'error');
+                    showToast('Error al leer el archivo', 'error');
                 }
             };
             reader.readAsBinaryString(file);
@@ -377,22 +395,14 @@
         function renderMatchesList() {
             const container = document.getElementById('matchesList');
             if (state.matches.length === 0) return;
-            
             const phases = {};
             state.matches.forEach(m => {
                 if (!phases[m.group]) phases[m.group] = 0;
                 phases[m.group]++;
             });
-
-            container.innerHTML = `
-                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-                    ${Object.entries(phases).map(([phase, count]) => `
-                        <span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">
-                            ${phase}: ${count}
-                        </span>
-                    `).join('')}
-                </div>
-            `;
+            container.innerHTML = `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                ${Object.entries(phases).map(([phase, count]) => `<span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">${phase}: ${count}</span>`).join('')}
+            </div>`;
         }
 
         // ==================== PREDICTIONS ====================
@@ -422,17 +432,14 @@
         function loadPrediction(event, player) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const workbook = XLSX.read(e.target.result, { type: 'binary' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
                     state.predictions[player] = {};
                     let count = 0;
-
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
                         if (row[0]) {
@@ -445,13 +452,10 @@
                             }
                         }
                     }
-
-                    const uploadEl = document.getElementById('upload-' + sanitizeId(player));
-                    const filenameEl = document.getElementById('filename-' + sanitizeId(player));
-                    if (uploadEl) uploadEl.classList.add('has-file');
-                    if (filenameEl) filenameEl.textContent = `✅ ${file.name} (${count} partidos)`;
-
+                    document.getElementById('upload-' + sanitizeId(player)).classList.add('has-file');
+                    document.getElementById('filename-' + sanitizeId(player)).textContent = `✅ ${file.name} (${count} partidos)`;
                     renderPredictionsSummary();
+                    saveToCloud();
                     showToast(`${player}: ${count} pronósticos cargados`, 'success');
                 } catch (err) {
                     showToast('Error al leer el archivo', 'error');
@@ -466,16 +470,10 @@
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay datos para mostrar.</p>';
                 return;
             }
-
             container.innerHTML = `
                 <div style="overflow-x: auto;">
                     <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th style="text-align:left;">Partido</th>
-                                ${state.players.map(p => `<th>${p}</th>`).join('')}
-                            </tr>
-                        </thead>
+                        <thead><tr><th style="text-align:left;">Partido</th>${state.players.map(p => `<th>${p}</th>`).join('')}</tr></thead>
                         <tbody>
                             ${state.matches.slice(0, 10).map(m => `
                                 <tr>
@@ -494,10 +492,7 @@
         }
 
         function downloadPredictionTemplate() {
-            if (state.matches.length === 0) {
-                showToast('Primero carga el Fixture.xlsx', 'error');
-                return;
-            }
+            if (state.matches.length === 0) { showToast('Primero carga el Fixture.xlsx', 'error'); return; }
             const wsData = [['Partido', 'Goles Equipo 1', 'Goles Equipo 2']];
             state.matches.forEach(m => wsData.push([m.name, '', '']));
             const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -514,26 +509,21 @@
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
                 return;
             }
-
             let html = '';
             let currentPhase = '';
-
             state.matches.forEach(m => {
                 if (m.group !== currentPhase) {
                     currentPhase = m.group;
                     html += `<div class="group-title" style="margin-top: 1.5rem;">${currentPhase}</div>`;
                 }
-
                 const real = state.realResults[m.name] || { g1: '', g2: '' };
                 html += `
                     <div class="match-row">
                         <span class="match-team home">${m.team1}</span>
                         <div class="score-wrapper">
-                            <input type="number" class="score-input" min="0" max="20" value="${real.g1}" 
-                                onchange="updateRealResult('${m.name}', 'g1', this.value)">
+                            <input type="number" class="score-input" min="0" max="20" value="${real.g1}" onchange="updateRealResult('${m.name}', 'g1', this.value)">
                             <span class="match-vs">VS</span>
-                            <input type="number" class="score-input" min="0" max="20" value="${real.g2}" 
-                                onchange="updateRealResult('${m.name}', 'g2', this.value)">
+                            <input type="number" class="score-input" min="0" max="20" value="${real.g2}" onchange="updateRealResult('${m.name}', 'g2', this.value)">
                         </div>
                         <span class="match-team away">${m.team2}</span>
                     </div>
@@ -545,6 +535,7 @@
         function updateRealResult(matchName, team, value) {
             if (!state.realResults[matchName]) state.realResults[matchName] = { g1: '', g2: '' };
             state.realResults[matchName][team] = value === '' ? '' : parseInt(value);
+            saveToCloud(); // Guardar automáticamente
         }
 
         // ==================== CALCULATE ALL ====================
@@ -568,10 +559,8 @@
                 matchesWithResult.forEach(m => {
                     const pred = state.predictions[player] && state.predictions[player][m.name];
                     if (!pred || pred.g1 === undefined || pred.g2 === undefined) return;
-
                     const real = state.realResults[m.name];
                     const result = evaluatePrediction(pred.g1, pred.g2, real.g1, real.g2);
-
                     let points = 0;
                     if (result.type === 'exact') points = rules.exact;
                     else if (result.type === 'diff') points = rules.diff;
@@ -587,6 +576,7 @@
             });
 
             state.resultsCalculated = true;
+            saveToCloud();
             showToast('¡Tablas y resultados calculados!', 'success');
             showSection('standings');
         }
@@ -596,7 +586,7 @@
             'ABCDEFGHIJKL'.split('').forEach(g => groups[g] = {});
 
             validMatches.forEach(m => {
-                if (m.id >= 1 && m.id <= 72) {
+                if (m.id >= 1 && m.id <= 72) { // Solo fase de grupos
                     const groupMatch = m.group.match(/Grupo\s+([A-L])/i);
                     if (!groupMatch) return;
                     const groupLetter = groupMatch[1].toUpperCase();
@@ -665,16 +655,13 @@
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados.</p>';
                 return;
             }
-
             let html = '';
             'ABCDEFGHIJKL'.split('').forEach(g => {
                 const teams = state.groupStandings[g];
                 if (Object.keys(teams).length === 0) return;
-
                 html += `<div class="group-title">🏆 Grupo ${g}</div>`;
                 html += `<div class="group-table-container"><table class="group-table">
                     <thead><tr><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th></tr></thead><tbody>`;
-                
                 teams.forEach((t, index) => {
                     const dg = t.gf - t.gc;
                     const dgStr = dg > 0 ? `+${dg}` : dg;
@@ -695,24 +682,20 @@
                 detailContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
                 return;
             }
-
             const totalMatches = Object.keys(state.realResults).filter(m => {
                 const r = state.realResults[m];
                 return r && r.g1 !== '' && r.g2 !== '' && !isNaN(r.g1) && !isNaN(r.g2);
             }).length;
-
             let maxScore = 0, maxPlayer = '';
             Object.keys(state.scores).forEach(p => {
                 if (state.scores[p].total > maxScore) { maxScore = state.scores[p].total; maxPlayer = p; }
             });
-
             statsContainer.innerHTML = `
                 <div class="stat-card"><div class="stat-value">${totalMatches}</div><div class="stat-label">Partidos evaluados</div></div>
                 <div class="stat-card"><div class="stat-value">${state.players.length}</div><div class="stat-label">Jugadores</div></div>
                 <div class="stat-card"><div class="stat-value">${maxScore}</div><div class="stat-label">Mejor puntaje</div></div>
                 <div class="stat-card"><div class="stat-value">${maxPlayer}</div><div class="stat-label">Líder</div></div>
             `;
-
             detailContainer.innerHTML = state.matches
                 .filter(m => state.realResults[m.name] && !isNaN(state.realResults[m.name].g1))
                 .map(m => {
@@ -726,12 +709,10 @@
                                 ${state.players.map(p => {
                                     const detail = state.scores[p].details.find(d => d.match === m.name);
                                     if (!detail) return `<div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;"><div style="font-size:0.8rem; color:var(--text-muted);">${p}</div><div>—</div></div>`;
-                                    
                                     let badgeClass = 'badge-fail';
                                     if (detail.type === 'exact') badgeClass = 'badge-exact';
                                     if (detail.type === 'diff') badgeClass = 'badge-diff';
                                     if (detail.type === 'winner') badgeClass = 'badge-winner';
-
                                     return `
                                         <div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;">
                                             <div style="font-size:0.8rem; color:var(--text-muted);">${p}</div>
@@ -753,7 +734,6 @@
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
                 return;
             }
-
             const sorted = [...state.players].sort((a, b) => state.scores[b].total - state.scores[a].total);
             const rules = getRules();
             const maxPossible = Object.keys(state.realResults).filter(m => {
@@ -767,7 +747,6 @@
                 const placeClass = i === 0 ? 'first-place' : i === 1 ? 'second-place' : 'third-place';
                 const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : 'bronze';
                 const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
-
                 return `
                     <div class="ranking-item ${placeClass}">
                         <div class="rank-number ${rankClass}">${medal}</div>
@@ -790,7 +769,6 @@
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('section-' + name).classList.add('active');
             event.target.classList.add('active');
-
             if (name === 'realResults') renderRealResultsInputs();
             if (name === 'standings') renderStandings();
             if (name === 'comparison') renderComparison();
@@ -805,8 +783,15 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Iniciar
-        init();
+        // ==================== INICIALIZACIÓN ====================
+        loadFromCloud().then(() => {
+            init();
+            loadFixtureAutomatically();
+        });
+
+        function init() {
+            renderPredictionsUploads();
+        }
     </script>
 </body>
 </html>
