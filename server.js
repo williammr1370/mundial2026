@@ -5,16 +5,30 @@ const { createClient } = require('@libsql/client');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Permitir JSON grande para el estado
-app.use(express.static(path.join(__dirname, '.'))); // Sirve tu index.html y Fixture.xlsx
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, '.')));
 
-// Conexión a Turso (SQLite en la nube)
+// LOGS DE DEPURACIÓN - Ver exactamente qué URL está llegando
+console.log('=== VARIABLES DE ENTORNO ===');
+console.log('TURSO_DATABASE_URL:', JSON.stringify(process.env.TURSO_DATABASE_URL));
+console.log('TURSO_AUTH_TOKEN:', process.env.TURSO_AUTH_TOKEN ? 'Presente (' + process.env.TURSO_AUTH_TOKEN.length + ' chars)' : 'AUSENTE');
+console.log('============================');
+
+// Limpiar la URL de espacios y caracteres invisibles
+const dbUrl = process.env.TURSO_DATABASE_URL ? process.env.TURSO_DATABASE_URL.trim() : '';
+
+if (!dbUrl) {
+  console.error('❌ ERROR: TURSO_DATABASE_URL no está definida');
+  process.exit(1);
+}
+
+// Conexión a Turso
 const db = createClient({
-  url: process.env.TURSO_DATABASE_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN,
+  url: dbUrl,
+  authToken: process.env.TURSO_AUTH_TOKEN ? process.env.TURSO_AUTH_TOKEN.trim() : undefined,
 });
 
-// Inicializar la tabla al arrancar
+// Inicializar la tabla
 async function initDB() {
   try {
     await db.execute(`
@@ -26,9 +40,10 @@ async function initDB() {
     await db.execute(`
       INSERT OR IGNORE INTO quiniela_state (id, data) VALUES ('main', '{}')
     `);
-    console.log('✅ Base de datos SQLite (Turso) inicializada');
+    console.log('✅ Base de datos Turso inicializada correctamente');
   } catch (err) {
     console.error('❌ Error al inicializar la BD:', err);
+    console.error('URL recibida:', dbUrl);
   }
 }
 initDB();
@@ -62,12 +77,11 @@ app.get('/api/load', async (req, res) => {
   }
 });
 
-// Ruta comodín para que el frontend funcione
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
