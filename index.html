@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🏆 Quiniela Mundial - Juan, Ricardo y Willy</title>
-    <!-- Librería para leer Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -55,14 +54,14 @@
         input:focus { outline: none; border-color: var(--gold); }
         input[type="file"] { display: none; }
         .file-upload {
-            border: 2px dashed var(--border); border-radius: 12px; padding: 2rem; text-align: center;
+            border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center;
             cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.15);
         }
         .file-upload:hover { border-color: var(--gold); background: rgba(226, 183, 20, 0.05); }
         .file-upload.has-file { border-color: var(--green); background: rgba(46, 204, 113, 0.08); }
-        .file-upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        .file-upload-text { color: var(--text-muted); font-size: 0.9rem; }
-        .file-upload-name { color: var(--green); font-weight: 700; margin-top: 0.3rem; }
+        .file-upload-icon { font-size: 2rem; margin-bottom: 0.3rem; }
+        .file-upload-text { color: var(--text-muted); font-size: 0.85rem; }
+        .file-upload-name { color: var(--green); font-weight: 700; margin-top: 0.3rem; font-size: 0.85rem; }
         .btn {
             padding: 0.75rem 2rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
             cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
@@ -143,6 +142,24 @@
             background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #85c1e9;
             padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
         }
+        .player-header {
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;
+            border-left: 4px solid var(--gold);
+        }
+        .player-header h3 { font-size: 1.3rem; margin-bottom: 0.3rem; }
+        .player-header p { color: var(--text-muted); font-size: 0.85rem; }
+        .round-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem; margin-bottom: 1rem;
+        }
+        .round-card {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem; transition: all 0.3s;
+        }
+        .round-card:hover { border-color: var(--gold); }
+        .round-card h4 { font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--gold); }
+        .round-card .round-count { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
         @media (max-width: 600px) {
             .header h1 { font-size: 1.4rem; }
             .container { padding: 1rem; }
@@ -150,6 +167,7 @@
             .nav-tab { padding: 0.5rem 0.8rem; font-size: 0.75rem; }
             .match-row { grid-template-columns: 1fr; gap: 0.3rem; text-align: center; }
             .match-team.home, .match-team.away { text-align: center; }
+            .round-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -210,15 +228,15 @@
         <!-- PREDICTIONS SECTION -->
         <div class="section" id="section-predictions">
             <div class="card">
-                <div class="card-title"><span class="icon">📝</span> Subir Pronósticos</div>
+                <div class="card-title"><span class="icon">📝</span> Subir Pronósticos por Fase</div>
                 <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
-                    Cada hermano descarga la plantilla, la llena con sus goles y la sube.
+                    Cada hermano debe subir sus pronósticos en 8 cargas separadas, una por cada fase del torneo.
+                    Descarga las plantillas, llénalas y súbelas cuando estés listo.
                 </p>
-                <button class="btn btn-info btn-small" onclick="downloadPredictionTemplate()" style="margin-bottom: 1rem;">📥 Descargar Plantilla de Pronósticos</button>
                 <div id="predictionsUploads"></div>
             </div>
             <div class="card">
-                <div class="card-title"><span class="icon">📊</span> Vista Rápida</div>
+                <div class="card-title"><span class="icon">📊</span> Vista Rápida de Pronósticos</div>
                 <div id="predictionsSummary"></div>
             </div>
         </div>
@@ -272,11 +290,23 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        // ==================== CONSTANTES DE FASES ====================
+        const ROUNDS = [
+            { id: 'round1', name: '1ra Ronda Grupos', range: [1, 24], icon: '🏟️' },
+            { id: 'round2', name: '2da Ronda Grupos', range: [25, 48], icon: '🏟️' },
+            { id: 'round3', name: '3ra Ronda Grupos', range: [49, 72], icon: '🏟️' },
+            { id: 'round16', name: 'Dieciseisavos de Final', range: [73, 88], icon: '⚔️' },
+            { id: 'round8', name: 'Octavos de Final', range: [89, 96], icon: '🔥' },
+            { id: 'round4', name: 'Cuartos de Final', range: [97, 100], icon: '💎' },
+            { id: 'semi', name: 'Semifinal', range: [101, 102], icon: '🏅' },
+            { id: 'final', name: 'Final y Tercer Puesto', range: [103, 104], icon: '🏆' }
+        ];
+
         // ==================== ESTADO GLOBAL ====================
         let state = {
             players: ['Juan', 'Ricardo', 'Willy'],
             matches: [],
-            predictions: {},
+            predictions: {}, // { player: { roundId: { matchName: {g1, g2} } } }
             realResults: {},
             scores: {},
             groupStandings: {},
@@ -311,9 +341,19 @@
             }
         }
 
+        // ==================== UTILIDAD: OBTENER RONDA POR ID ====================
+        function getRoundByMatchId(id) {
+            for (const round of ROUNDS) {
+                if (id >= round.range[0] && id <= round.range[1]) {
+                    return round;
+                }
+            }
+            return null;
+        }
+
         // ==================== LECTURA DEL FIXTURE.XLSX ====================
         async function loadFixtureAutomatically() {
-            if (state.matches.length > 0) return; // Ya está cargado desde la nube
+            if (state.matches.length > 0) return;
             
             try {
                 const response = await fetch('Fixture.xlsx');
@@ -325,7 +365,6 @@
                 const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
                 let count = 0;
-                // Columnas exactas del Excel proporcionado: 0=ID, 1=Equipo1, 4=Equipo2, 8=Fase
                 for (let i = 1; i < data.length; i++) {
                     const row = data[i];
                     const id = parseInt(row[0]);
@@ -335,8 +374,17 @@
 
                     if (id && team1 && team2) {
                         const matchName = `${team1} vs ${team2}`;
+                        const round = getRoundByMatchId(id);
                         if (!state.matches.find(m => m.id === id)) {
-                            state.matches.push({ id, name: matchName, team1, team2, group: phase });
+                            state.matches.push({ 
+                                id, 
+                                name: matchName, 
+                                team1, 
+                                team2, 
+                                group: phase,
+                                roundId: round ? round.id : 'unknown',
+                                roundName: round ? round.name : 'Desconocida'
+                            });
                             count++;
                         }
                     }
@@ -372,8 +420,13 @@
                         const phase = row[8] ? row[8].toString().trim() : '';
                         if (id && team1 && team2) {
                             const matchName = `${team1} vs ${team2}`;
+                            const round = getRoundByMatchId(id);
                             if (!state.matches.find(m => m.id === id)) {
-                                state.matches.push({ id, name: matchName, team1, team2, group: phase });
+                                state.matches.push({ 
+                                    id, name: matchName, team1, team2, group: phase,
+                                    roundId: round ? round.id : 'unknown',
+                                    roundName: round ? round.name : 'Desconocida'
+                                });
                                 count++;
                             }
                         }
@@ -395,41 +448,76 @@
         function renderMatchesList() {
             const container = document.getElementById('matchesList');
             if (state.matches.length === 0) return;
-            const phases = {};
-            state.matches.forEach(m => {
-                if (!phases[m.group]) phases[m.group] = 0;
-                phases[m.group]++;
+            
+            let html = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">';
+            ROUNDS.forEach(round => {
+                const count = state.matches.filter(m => m.roundId === round.id).length;
+                if (count > 0) {
+                    html += `<span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">
+                        ${round.icon} ${round.name}: ${count}
+                    </span>`;
+                }
             });
-            container.innerHTML = `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-                ${Object.entries(phases).map(([phase, count]) => `<span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">${phase}: ${count}</span>`).join('')}
-            </div>`;
+            html += '</div>';
+            container.innerHTML = html;
         }
 
-        // ==================== PREDICTIONS ====================
+        // ==================== PREDICTIONS (POR FASES) ====================
         function renderPredictionsUploads() {
             const container = document.getElementById('predictionsUploads');
-            container.innerHTML = state.players.map(player => `
-                <div class="card" style="margin-bottom: 1rem; padding: 1.2rem;">
-                    <div class="card-title"><span class="icon">👤</span> ${player}</div>
-                    <label class="file-upload" id="upload-${sanitizeId(player)}" onclick="document.getElementById('file-${sanitizeId(player)}').click()">
-                        <div class="file-upload-icon">📤</div>
-                        <div class="file-upload-text">Subir pronóstico de ${player}</div>
-                        <div class="file-upload-name" id="filename-${sanitizeId(player)}">${getPredictionStatus(player)}</div>
-                    </label>
-                    <input type="file" id="file-${sanitizeId(player)}" accept=".xlsx,.xls,.csv" onchange="loadPrediction(event, '${player}')">
-                </div>
-            `).join('');
+            if (state.matches.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
+                return;
+            }
+
+            let html = '';
+            state.players.forEach(player => {
+                html += `
+                    <div class="player-header">
+                        <h3>👤 ${player}</h3>
+                        <p>Sube tus pronósticos fase por fase</p>
+                    </div>
+                    <div class="round-grid">
+                `;
+                
+                ROUNDS.forEach(round => {
+                    const matchesInRound = state.matches.filter(m => m.roundId === round.id);
+                    const predictionsCount = state.predictions[player] && 
+                                           state.predictions[player][round.id] ? 
+                                           Object.keys(state.predictions[player][round.id]).length : 0;
+                    const hasFile = predictionsCount > 0;
+                    
+                    html += `
+                        <div class="round-card">
+                            <h4>${round.icon} ${round.name}</h4>
+                            <div class="round-count">${matchesInRound.length} partidos</div>
+                            <label class="file-upload ${hasFile ? 'has-file' : ''}" 
+                                   id="upload-${sanitizeId(player)}-${round.id}" 
+                                   onclick="document.getElementById('file-${sanitizeId(player)}-${round.id}').click()">
+                                <div class="file-upload-icon">${hasFile ? '✅' : '📤'}</div>
+                                <div class="file-upload-text">${hasFile ? `${predictionsCount}/${matchesInRound.length} partidos` : 'Subir pronóstico'}</div>
+                                <div class="file-upload-name" id="filename-${sanitizeId(player)}-${round.id}"></div>
+                            </label>
+                            <input type="file" id="file-${sanitizeId(player)}-${round.id}" 
+                                   accept=".xlsx,.xls,.csv" 
+                                   onchange="loadPrediction(event, '${player}', '${round.id}')">
+                            <button class="btn btn-info btn-small" 
+                                    onclick="downloadRoundTemplate('${player}', '${round.id}')" 
+                                    style="width: 100%; margin-top: 0.5rem; padding: 0.3rem;">
+                                📥 Plantilla
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
             renderPredictionsSummary();
         }
 
-        function getPredictionStatus(player) {
-            if (state.predictions[player] && Object.keys(state.predictions[player]).length > 0) {
-                return `✅ ${Object.keys(state.predictions[player]).length} partidos`;
-            }
-            return 'Sin pronóstico aún';
-        }
-
-        function loadPrediction(event, player) {
+        function loadPrediction(event, player, roundId) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -438,7 +526,10 @@
                     const workbook = XLSX.read(e.target.result, { type: 'binary' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    state.predictions[player] = {};
+                    
+                    if (!state.predictions[player]) state.predictions[player] = {};
+                    if (!state.predictions[player][roundId]) state.predictions[player][roundId] = {};
+                    
                     let count = 0;
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
@@ -447,16 +538,20 @@
                             const g1 = parseInt(row[1]);
                             const g2 = parseInt(row[2]);
                             if (!isNaN(g1) && !isNaN(g2)) {
-                                state.predictions[player][matchName] = { g1, g2 };
+                                state.predictions[player][roundId][matchName] = { g1, g2 };
                                 count++;
                             }
                         }
                     }
-                    document.getElementById('upload-' + sanitizeId(player)).classList.add('has-file');
-                    document.getElementById('filename-' + sanitizeId(player)).textContent = `✅ ${file.name} (${count} partidos)`;
+
+                    const uploadEl = document.getElementById('upload-' + sanitizeId(player) + '-' + roundId);
+                    const filenameEl = document.getElementById('filename-' + sanitizeId(player) + '-' + roundId);
+                    if (uploadEl) uploadEl.classList.add('has-file');
+                    if (filenameEl) filenameEl.textContent = `✅ ${count} partidos`;
+
                     renderPredictionsSummary();
                     saveToCloud();
-                    showToast(`${player}: ${count} pronósticos cargados`, 'success');
+                    showToast(`${player} - ${ROUNDS.find(r => r.id === roundId).name}: ${count} pronósticos`, 'success');
                 } catch (err) {
                     showToast('Error al leer el archivo', 'error');
                 }
@@ -464,42 +559,59 @@
             reader.readAsBinaryString(file);
         }
 
+        function downloadRoundTemplate(player, roundId) {
+            const round = ROUNDS.find(r => r.id === roundId);
+            const matchesInRound = state.matches.filter(m => m.roundId === roundId);
+            
+            if (matchesInRound.length === 0) {
+                showToast('No hay partidos en esta fase', 'error');
+                return;
+            }
+            
+            const wsData = [['Partido', 'Goles Equipo 1', 'Goles Equipo 2']];
+            matchesInRound.forEach(m => wsData.push([m.name, '', '']));
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, round.name);
+            XLSX.writeFile(wb, `pronosticos_${player}_${round.name.replace(/\s+/g, '_')}.xlsx`);
+            showToast(`Plantilla de ${round.name} descargada`, 'success');
+        }
+
         function renderPredictionsSummary() {
             const container = document.getElementById('predictionsSummary');
-            if (Object.keys(state.predictions).length === 0 || state.matches.length === 0) {
+            if (state.matches.length === 0) {
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay datos para mostrar.</p>';
                 return;
             }
-            container.innerHTML = `
-                <div style="overflow-x: auto;">
-                    <table class="results-table">
-                        <thead><tr><th style="text-align:left;">Partido</th>${state.players.map(p => `<th>${p}</th>`).join('')}</tr></thead>
-                        <tbody>
-                            ${state.matches.slice(0, 10).map(m => `
-                                <tr>
-                                    <td class="match-name">${m.name}</td>
-                                    ${state.players.map(p => {
-                                        const pred = state.predictions[p] && state.predictions[p][m.name];
-                                        return pred ? `<td><strong>${pred.g1}</strong> - <strong>${pred.g2}</strong></td>` : `<td style="color: var(--text-muted);">—</td>`;
-                                    }).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    ${state.matches.length > 10 ? `<p style="text-align:center; color: var(--text-muted); margin-top:0.5rem; font-size:0.8rem;">... y ${state.matches.length - 10} partidos más</p>` : ''}
-                </div>
-            `;
-        }
 
-        function downloadPredictionTemplate() {
-            if (state.matches.length === 0) { showToast('Primero carga el Fixture.xlsx', 'error'); return; }
-            const wsData = [['Partido', 'Goles Equipo 1', 'Goles Equipo 2']];
-            state.matches.forEach(m => wsData.push([m.name, '', '']));
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Pronósticos');
-            XLSX.writeFile(wb, 'plantilla_pronosticos.xlsx');
-            showToast('Plantilla descargada', 'success');
+            let html = '';
+            ROUNDS.forEach(round => {
+                const matchesInRound = state.matches.filter(m => m.roundId === round.id);
+                if (matchesInRound.length === 0) return;
+                
+                html += `<div class="group-title">${round.icon} ${round.name}</div>`;
+                html += `<div style="overflow-x: auto;"><table class="results-table">
+                    <thead><tr><th style="text-align:left;">Partido</th>${state.players.map(p => `<th>${p}</th>`).join('')}</tr></thead>
+                    <tbody>`;
+                
+                matchesInRound.forEach(m => {
+                    html += `<tr><td class="match-name">${m.name}</td>`;
+                    state.players.forEach(p => {
+                        const pred = state.predictions[p] && 
+                                    state.predictions[p][round.id] && 
+                                    state.predictions[p][round.id][m.name];
+                        html += pred ? 
+                            `<td><strong>${pred.g1}</strong> - <strong>${pred.g2}</strong></td>` : 
+                            `<td style="color: var(--text-muted);">—</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table></div>';
+            });
+            
+            container.innerHTML = html;
         }
 
         // ==================== REAL RESULTS ====================
@@ -510,11 +622,12 @@
                 return;
             }
             let html = '';
-            let currentPhase = '';
+            let currentRound = '';
             state.matches.forEach(m => {
-                if (m.group !== currentPhase) {
-                    currentPhase = m.group;
-                    html += `<div class="group-title" style="margin-top: 1.5rem;">${currentPhase}</div>`;
+                if (m.roundId !== currentRound) {
+                    currentRound = m.roundId;
+                    const round = ROUNDS.find(r => r.id === currentRound);
+                    html += `<div class="group-title" style="margin-top: 1.5rem;">${round.icon} ${round.name}</div>`;
                 }
                 const real = state.realResults[m.name] || { g1: '', g2: '' };
                 html += `
@@ -535,7 +648,7 @@
         function updateRealResult(matchName, team, value) {
             if (!state.realResults[matchName]) state.realResults[matchName] = { g1: '', g2: '' };
             state.realResults[matchName][team] = value === '' ? '' : parseInt(value);
-            saveToCloud(); // Guardar automáticamente
+            saveToCloud();
         }
 
         // ==================== CALCULATE ALL ====================
@@ -557,8 +670,12 @@
             state.players.forEach(player => {
                 state.scores[player] = { exact: 0, diff: 0, winner: 0, fail: 0, total: 0, details: [] };
                 matchesWithResult.forEach(m => {
-                    const pred = state.predictions[player] && state.predictions[player][m.name];
+                    // Buscar pronóstico en la ronda correspondiente
+                    const pred = state.predictions[player] && 
+                                state.predictions[player][m.roundId] && 
+                                state.predictions[player][m.roundId][m.name];
                     if (!pred || pred.g1 === undefined || pred.g2 === undefined) return;
+                    
                     const real = state.realResults[m.name];
                     const result = evaluatePrediction(pred.g1, pred.g2, real.g1, real.g2);
                     let points = 0;
@@ -569,7 +686,8 @@
                     state.scores[player][result.type]++;
                     state.scores[player].total += points;
                     state.scores[player].details.push({
-                        match: m.name, group: m.group, prediction: `${pred.g1}-${pred.g2}`,
+                        match: m.name, group: m.group, round: m.roundName,
+                        prediction: `${pred.g1}-${pred.g2}`,
                         real: `${real.g1}-${real.g2}`, type: result.type, points: points, description: result.description
                     });
                 });
@@ -586,7 +704,7 @@
             'ABCDEFGHIJKL'.split('').forEach(g => groups[g] = {});
 
             validMatches.forEach(m => {
-                if (m.id >= 1 && m.id <= 72) { // Solo fase de grupos
+                if (m.id >= 1 && m.id <= 72) {
                     const groupMatch = m.group.match(/Grupo\s+([A-L])/i);
                     if (!groupMatch) return;
                     const groupLetter = groupMatch[1].toUpperCase();
@@ -704,6 +822,7 @@
                         <div class="card" style="padding: 1rem; margin-bottom: 1rem;">
                             <div style="font-weight: 700; text-align: center; margin-bottom: 0.8rem;">
                                 ${m.name} <span style="color: var(--gold);">| Resultado: ${real.g1} - ${real.g2}</span>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">${m.roundName}</div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
                                 ${state.players.map(p => {
