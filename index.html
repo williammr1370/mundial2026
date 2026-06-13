@@ -3,176 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏆 Quiniela Mundial - 2026</title>
+    <title>🏆 Quiniela Mundial 26 - Juan, Ricardo y Willy</title>
+    
+    <!-- Fuentes oficiales estilo FWC 26 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Librería para leer Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         :root {
-            --primary: #1a1a2e; --secondary: #16213e; --accent: #0f3460;
-            --gold: #e2b714; --gold-dark: #c9a20f; --green: #00b894;
-            --red: #e74c3c; --text: #ffffff; --text-muted: #a0a0b0;
-            --card-bg: #1e2a45; --border: #2a3a5c;
+            /* Paleta de Colores Oficial Inspirada en FIFA World Cup 26 */
+            --fifa-dark: #1A1A2E;
+            --fifa-blue: #16213E;
+            --fifa-navy: #0F3460;
+            --fifa-gold: #E2B714;
+            --fifa-gold-dark: #C9A20F;
+            --fifa-white: #FFFFFF;
+            --fifa-text-muted: #A0A0B0;
+            --fifa-green: #00B894;
+            --fifa-red: #E74C3C;
+            --fifa-card-bg: #1E2A45;
+            --fifa-border: #2A3A5C;
+            
+            /* Tipografía estilo FWC 26 */
+            --font-titles: 'Rajdhani', sans-serif;
+            --font-body: 'Barlow', sans-serif;
         }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--primary); color: var(--text); min-height: 100vh;
-            background-image: radial-gradient(ellipse at top left, rgba(15, 52, 96, 0.6) 0%, transparent 50%),
-                              radial-gradient(ellipse at bottom right, rgba(226, 183, 20, 0.1) 0%, transparent 50%);
+            font-family: var(--font-body);
+            background: var(--fifa-dark); 
+            color: var(--fifa-white); 
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(15, 52, 96, 0.6) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(226, 183, 20, 0.08) 0%, transparent 50%);
         }
+
         .header {
-            background: linear-gradient(135deg, var(--secondary), var(--accent));
-            padding: 1.5rem 2rem; border-bottom: 3px solid var(--gold); text-align: center;
+            background: linear-gradient(135deg, var(--fifa-blue), var(--fifa-navy));
+            padding: 1.5rem 2rem; 
+            border-bottom: 4px solid var(--fifa-gold); 
+            text-align: center;
         }
-        .header h1 { font-size: 2rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
-        .header p { color: var(--gold); margin-top: 0.3rem; font-size: 1rem; }
+        .header h1 { 
+            font-family: var(--font-titles);
+            font-size: 2.2rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 3px; 
+        }
+        .header p { 
+            font-family: var(--font-titles);
+            color: var(--fifa-gold); 
+            margin-top: 0.3rem; 
+            font-size: 1.1rem; 
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
         .nav-tabs {
             display: flex; justify-content: center; gap: 0.5rem; padding: 1rem;
-            background: rgba(0,0,0,0.2); flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+            background: rgba(0,0,0,0.3); flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+            backdrop-filter: blur(10px);
         }
         .nav-tab {
-            padding: 0.7rem 1.2rem; border: 2px solid var(--border); background: transparent;
-            color: var(--text-muted); border-radius: 50px; cursor: pointer; font-size: 0.9rem;
-            font-weight: 600; transition: all 0.3s ease;
+            font-family: var(--font-titles);
+            padding: 0.7rem 1.2rem; border: 2px solid var(--fifa-border); background: transparent;
+            color: var(--fifa-text-muted); border-radius: 4px; cursor: pointer; font-size: 1rem;
+            font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 1px;
         }
-        .nav-tab:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
-        .nav-tab.active { background: var(--gold); color: var(--primary); border-color: var(--gold); }
+        .nav-tab:hover { border-color: var(--fifa-gold); color: var(--fifa-gold); transform: translateY(-2px); }
+        .nav-tab.active { background: var(--fifa-gold); color: var(--fifa-dark); border-color: var(--fifa-gold); }
+
         .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
         .section { display: none; animation: fadeIn 0.4s ease; }
         .section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
         .card {
-            background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+            background: var(--fifa-card-bg); border: 1px solid var(--fifa-border); border-radius: 8px;
             padding: 1.8rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
-        .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .card-title .icon { font-size: 1.4rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        input[type="text"], input[type="number"] {
-            width: 100%; padding: 0.7rem 1rem; border: 2px solid var(--border); border-radius: 10px;
-            background: rgba(0,0,0,0.3); color: var(--text); font-size: 1rem; transition: border-color 0.3s;
+        .card-title { 
+            font-family: var(--font-titles);
+            font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; 
+            text-transform: uppercase; letter-spacing: 1px;
         }
-        input:focus { outline: none; border-color: var(--gold); }
+        .card-title .icon { font-size: 1.4rem; }
+
+        label { display: block; font-size: 0.85rem; color: var(--fifa-text-muted); margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input[type="text"], input[type="number"] {
+            width: 100%; padding: 0.7rem 1rem; border: 2px solid var(--fifa-border); border-radius: 4px;
+            background: rgba(0,0,0,0.3); color: var(--fifa-white); font-family: var(--font-body); font-size: 1rem; transition: border-color 0.3s;
+        }
+        input:focus { outline: none; border-color: var(--fifa-gold); }
         input[type="file"] { display: none; }
+
         .file-upload {
-            border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center;
+            border: 2px dashed var(--fifa-border); border-radius: 8px; padding: 1.5rem; text-align: center;
             cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.15);
         }
-        .file-upload:hover { border-color: var(--gold); background: rgba(226, 183, 20, 0.05); }
-        .file-upload.has-file { border-color: var(--green); background: rgba(46, 204, 113, 0.08); }
+        .file-upload:hover { border-color: var(--fifa-gold); background: rgba(226, 183, 20, 0.05); }
+        .file-upload.has-file { border-color: var(--fifa-green); background: rgba(0, 184, 148, 0.08); }
         .file-upload-icon { font-size: 2rem; margin-bottom: 0.3rem; }
-        .file-upload-text { color: var(--text-muted); font-size: 0.85rem; }
-        .file-upload-name { color: var(--green); font-weight: 700; margin-top: 0.3rem; font-size: 0.85rem; }
+        .file-upload-text { color: var(--fifa-text-muted); font-size: 0.85rem; }
+        .file-upload-name { color: var(--fifa-green); font-weight: 700; margin-top: 0.3rem; font-size: 0.85rem; }
+
         .btn {
-            padding: 0.75rem 2rem; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+            font-family: var(--font-titles);
+            padding: 0.75rem 2rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: 700;
             cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
         }
-        .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: var(--primary); }
+        .btn-primary { background: linear-gradient(135deg, var(--fifa-gold), var(--fifa-gold-dark)); color: var(--fifa-dark); }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(226, 183, 20, 0.4); }
-        .btn-success { background: linear-gradient(135deg, var(--green), #00a884); color: white; }
+        .btn-success { background: linear-gradient(135deg, var(--fifa-green), #00a884); color: white; }
         .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
-        .btn-danger { background: linear-gradient(135deg, var(--red), #c0392b); color: white; }
         .btn-small { padding: 0.4rem 1rem; font-size: 0.8rem; }
         .btn-group { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
         .match-row {
             display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center;
-            padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.15); margin-bottom: 0.5rem;
+            padding: 0.8rem; border-radius: 8px; background: rgba(0,0,0,0.15); margin-bottom: 0.5rem;
         }
-        .match-team { font-weight: 600; font-size: 0.9rem; }
+        .match-team { font-weight: 600; font-size: 0.95rem; }
         .match-team.home { text-align: right; }
         .match-team.away { text-align: left; }
-        .match-vs { color: var(--gold); font-weight: 800; font-size: 0.8rem; padding: 0 0.8rem; }
+        .match-vs { color: var(--fifa-gold); font-family: var(--font-titles); font-weight: 700; font-size: 0.9rem; padding: 0 0.8rem; }
         .score-input {
-            width: 55px; text-align: center; padding: 0.5rem; border: 2px solid var(--border);
-            border-radius: 8px; background: rgba(0,0,0,0.4); color: var(--text); font-size: 1.1rem; font-weight: 700;
+            width: 55px; text-align: center; padding: 0.5rem; border: 2px solid var(--fifa-border);
+            border-radius: 4px; background: rgba(0,0,0,0.4); color: var(--fifa-white); font-family: var(--font-titles); font-size: 1.2rem; font-weight: 700;
         }
-        .score-input:focus { outline: none; border-color: var(--gold); }
+        .score-input:focus { outline: none; border-color: var(--fifa-gold); }
         .score-wrapper { display: flex; gap: 0.5rem; justify-content: center; align-items: center; }
+
         .results-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
         .results-table th {
-            background: rgba(0,0,0,0.4); padding: 0.8rem; text-align: center; font-weight: 700;
-            text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); border-bottom: 2px solid var(--gold);
+            background: rgba(0,0,0,0.4); padding: 0.8rem; text-align: center; font-family: var(--font-titles);
+            text-transform: uppercase; font-size: 0.8rem; color: var(--fifa-text-muted); border-bottom: 2px solid var(--fifa-gold); letter-spacing: 1px;
         }
-        .results-table td { padding: 0.6rem 0.8rem; text-align: center; border-bottom: 1px solid var(--border); }
+        .results-table td { padding: 0.6rem 0.8rem; text-align: center; border-bottom: 1px solid var(--fifa-border); }
         .results-table .match-name { text-align: left; font-weight: 600; }
-        .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-        .badge-exact { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+
+        .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 4px; font-family: var(--font-titles); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-exact { background: rgba(0, 184, 148, 0.2); color: var(--fifa-green); }
         .badge-diff { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
         .badge-winner { background: rgba(52, 152, 219, 0.2); color: #3498db; }
-        .badge-fail { background: rgba(231, 76, 60, 0.2); color: #e74c3c; }
+        .badge-fail { background: rgba(231, 76, 60, 0.2); color: var(--fifa-red); }
+
         .ranking-item {
-            display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem 1.5rem; border-radius: 14px;
-            margin-bottom: 0.8rem; background: var(--card-bg); border: 2px solid var(--border); transition: all 0.3s;
+            display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem 1.5rem; border-radius: 8px;
+            margin-bottom: 0.8rem; background: var(--fifa-card-bg); border: 2px solid var(--fifa-border); transition: all 0.3s;
         }
-        .ranking-item.first-place { border-color: var(--gold); background: linear-gradient(135deg, rgba(226, 183, 20, 0.1), rgba(226, 183, 20, 0.02)); }
+        .ranking-item.first-place { border-color: var(--fifa-gold); background: linear-gradient(135deg, rgba(226, 183, 20, 0.1), rgba(226, 183, 20, 0.02)); }
         .ranking-item.second-place { border-color: #c0c0c0; }
         .ranking-item.third-place { border-color: #cd7f32; }
-        .rank-number { font-size: 2rem; font-weight: 900; width: 50px; text-align: center; }
-        .rank-number.gold { color: var(--gold); }
+        .rank-number { font-family: var(--font-titles); font-size: 2.2rem; font-weight: 700; width: 50px; text-align: center; }
+        .rank-number.gold { color: var(--fifa-gold); }
         .rank-number.silver { color: #c0c0c0; }
         .rank-number.bronze { color: #cd7f32; }
         .rank-info { flex: 1; }
-        .rank-name { font-size: 1.2rem; font-weight: 700; }
-        .rank-detail { color: var(--text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
-        .rank-score { font-size: 1.8rem; font-weight: 900; color: var(--gold); }
-        .progress-bar { width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; margin-top: 0.5rem; }
-        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; background: linear-gradient(90deg, var(--gold), var(--gold-dark)); }
+        .rank-name { font-family: var(--font-titles); font-size: 1.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .rank-detail { color: var(--fifa-text-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+        .rank-score { font-family: var(--font-titles); font-size: 2rem; font-weight: 700; color: var(--fifa-gold); }
+        .progress-bar { width: 100%; height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-top: 0.5rem; }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; background: linear-gradient(90deg, var(--fifa-gold), var(--fifa-gold-dark)); }
+
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; text-align: center; }
-        .stat-value { font-size: 2rem; font-weight: 900; color: var(--gold); }
-        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.2rem; }
+        .stat-card { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; text-align: center; border: 1px solid var(--fifa-border); }
+        .stat-value { font-family: var(--font-titles); font-size: 2.5rem; font-weight: 700; color: var(--fifa-gold); }
+        .stat-label { font-size: 0.75rem; color: var(--fifa-text-muted); text-transform: uppercase; margin-top: 0.2rem; letter-spacing: 1px; }
+
         .toast {
-            position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 12px;
+            position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; border-radius: 8px;
             font-weight: 600; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.4s ease;
-            max-width: 400px;
+            max-width: 400px; font-family: var(--font-body);
         }
         .toast.show { transform: translateY(0); opacity: 1; }
-        .toast-success { background: var(--green); color: white; }
-        .toast-error { background: var(--red); color: white; }
-        .toast-info { background: var(--info); color: white; }
+        .toast-success { background: var(--fifa-green); color: white; }
+        .toast-error { background: var(--fifa-red); color: white; }
+        .toast-info { background: var(--fifa-navy); color: white; border: 1px solid var(--fifa-gold); }
+
         .group-title {
-            font-size: 1rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px;
-            margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--gold);
+            font-family: var(--font-titles);
+            font-size: 1.2rem; color: var(--fifa-gold); text-transform: uppercase; letter-spacing: 2px;
+            margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--fifa-gold);
         }
-        .group-table-container { overflow-x: auto; margin-bottom: 2rem; border-radius: 12px; border: 1px solid var(--border); }
+        .group-table-container { overflow-x: auto; margin-bottom: 2rem; border-radius: 8px; border: 1px solid var(--fifa-border); }
         .group-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 600px; }
-        .group-table th { background: var(--accent); padding: 0.6rem; text-align: center; font-weight: 700; border-bottom: 2px solid var(--gold); }
+        .group-table th { background: var(--fifa-navy); padding: 0.6rem; text-align: center; font-family: var(--font-titles); font-weight: 600; border-bottom: 2px solid var(--fifa-gold); letter-spacing: 1px; }
         .group-table th:first-child, .group-table td:first-child { text-align: left; padding-left: 1rem; }
-        .group-table td { padding: 0.6rem; text-align: center; border-bottom: 1px solid var(--border); }
+        .group-table td { padding: 0.6rem; text-align: center; border-bottom: 1px solid var(--fifa-border); }
         .group-table tr:nth-child(even) { background: rgba(0,0,0,0.15); }
-        .group-table tr.top-2 { background: rgba(46, 204, 113, 0.1); border-left: 3px solid var(--green); }
-        .group-table tr.top-2 td:first-child { font-weight: 700; color: var(--green); }
+        .group-table tr.top-2 { background: rgba(0, 184, 148, 0.1); border-left: 3px solid var(--fifa-green); }
+        .group-table tr.top-2 td:first-child { font-weight: 700; color: var(--fifa-green); }
+
         .auto-load-hint {
             background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #85c1e9;
             padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
         }
         .debug-log {
-            background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px;
+            background: rgba(0,0,0,0.4); border: 1px solid var(--fifa-border); border-radius: 8px;
             padding: 1rem; margin-top: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem;
-            max-height: 200px; overflow-y: auto; color: var(--text-muted);
+            max-height: 200px; overflow-y: auto; color: var(--fifa-text-muted);
         }
-        .debug-log .success { color: var(--green); }
-        .debug-log .error { color: var(--red); }
+        .debug-log .success { color: var(--fifa-green); }
+        .debug-log .error { color: var(--fifa-red); }
         .debug-log .info { color: #3498db; }
+
         .player-header {
-            background: linear-gradient(135deg, var(--accent), var(--secondary));
-            padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem;
-            border-left: 4px solid var(--gold);
+            background: linear-gradient(135deg, var(--fifa-navy), var(--fifa-blue));
+            padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1rem;
+            border-left: 4px solid var(--fifa-gold);
         }
-        .player-header h3 { font-size: 1.3rem; margin-bottom: 0.3rem; }
-        .player-header p { color: var(--text-muted); font-size: 0.85rem; }
+        .player-header h3 { font-family: var(--font-titles); font-size: 1.4rem; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 1px; }
+        .player-header p { color: var(--fifa-text-muted); font-size: 0.85rem; }
+
         .round-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1rem; margin-bottom: 1rem;
         }
         .round-card {
-            background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-            border-radius: 12px; padding: 1rem; transition: all 0.3s;
+            background: rgba(0,0,0,0.2); border: 1px solid var(--fifa-border);
+            border-radius: 8px; padding: 1rem; transition: all 0.3s;
         }
-        .round-card:hover { border-color: var(--gold); }
-        .round-card h4 { font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--gold); }
-        .round-card .round-count { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+        .round-card:hover { border-color: var(--fifa-gold); }
+        .round-card h4 { font-family: var(--font-titles); font-size: 1rem; margin-bottom: 0.5rem; color: var(--fifa-gold); text-transform: uppercase; letter-spacing: 1px; }
+        .round-card .round-count { font-size: 0.8rem; color: var(--fifa-text-muted); margin-bottom: 0.8rem; }
+
         @media (max-width: 600px) {
-            .header h1 { font-size: 1.4rem; }
+            .header h1 { font-size: 1.5rem; }
             .container { padding: 1rem; }
             .card { padding: 1.2rem; }
             .nav-tab { padding: 0.5rem 0.8rem; font-size: 0.75rem; }
@@ -184,7 +250,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🏆 Quiniela Mundial</h1>
+        <h1>🏆 Quiniela Mundial 26</h1>
         <p>Juan • Ricardo • Willy</p>
     </div>
 
@@ -220,19 +286,19 @@
             <div class="card">
                 <div class="card-title"><span class="icon">📏</span> Reglas de Puntuación</div>
                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
-                        <span style="flex:1; font-weight:600;">🎯 Resultado Exacto</span>
-                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar marcador exacto</span>
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:8px;">
+                        <span style="flex:1; font-weight:600; font-family: var(--font-titles); letter-spacing: 1px;">🎯 RESULTADO EXACTO</span>
+                        <span style="color:var(--fifa-text-muted); font-size:0.8rem; flex:2;">Acertar marcador exacto</span>
                         <input type="number" id="ruleExact" value="3" min="0" max="10" style="width:60px; text-align:center;">
                     </div>
-                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
-                        <span style="flex:1; font-weight:600;">📊 Diferencia de Goles</span>
-                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar ganador y diferencia</span>
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:8px;">
+                        <span style="flex:1; font-weight:600; font-family: var(--font-titles); letter-spacing: 1px;">📊 DIFERENCIA DE GOLES</span>
+                        <span style="color:var(--fifa-text-muted); font-size:0.8rem; flex:2;">Acertar ganador y diferencia</span>
                         <input type="number" id="ruleDiff" value="2" min="0" max="10" style="width:60px; text-align:center;">
                     </div>
-                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:10px;">
-                        <span style="flex:1; font-weight:600;">✅ Solo Ganador</span>
-                        <span style="color:var(--text-muted); font-size:0.8rem; flex:2;">Acertar quién gana (o empate)</span>
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.8rem; background:rgba(0,0,0,0.15); border-radius:8px;">
+                        <span style="flex:1; font-weight:600; font-family: var(--font-titles); letter-spacing: 1px;">✅ SOLO GANADOR</span>
+                        <span style="color:var(--fifa-text-muted); font-size:0.8rem; flex:2;">Acertar quién gana (o empate)</span>
                         <input type="number" id="ruleWinner" value="1" min="0" max="10" style="width:60px; text-align:center;">
                     </div>
                 </div>
@@ -243,7 +309,7 @@
         <div class="section" id="section-predictions">
             <div class="card">
                 <div class="card-title"><span class="icon">📝</span> Subir Pronósticos por Fase</div>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                <p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
                     Cada hermano debe subir sus pronósticos en 8 cargas separadas, una por cada fase del torneo.
                     Descarga las plantillas, llénalas y súbelas cuando estés listo.
                 </p>
@@ -259,7 +325,7 @@
         <div class="section" id="section-realResults">
             <div class="card">
                 <div class="card-title"><span class="icon">⚽</span> Ingresar Resultados Reales</div>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                <p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
                     Ingresa los marcadores reales. Esto alimentará automáticamente las Tablas de Posiciones y el Ranking.
                 </p>
                 <div id="realResultsInputs"></div>
@@ -273,12 +339,12 @@
         <div class="section" id="section-standings">
             <div class="card">
                 <div class="card-title"><span class="icon">📊</span> Tablas de Posiciones por Grupo</div>
-                <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                <p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
                     Se generan automáticamente al calcular los resultados reales de los partidos 1 al 72.
-                    <span style="color: var(--green); font-weight: 700;">(Verde = Zona de Clasificación)</span>
+                    <span style="color: var(--fifa-green); font-weight: 700;">(Verde = Zona de Clasificación)</span>
                 </p>
                 <div id="standingsContainer">
-                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados. Ve a "Resultados Reales" e ingresa los marcadores.</p>
+                    <p style="color: var(--fifa-text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados. Ve a "Resultados Reales" e ingresa los marcadores.</p>
                 </div>
             </div>
         </div>
@@ -392,12 +458,10 @@
         function parseFixtureData(data) {
             addDebug(`📊 Archivo leído. Total de filas: ${data.length}`, 'info');
             
-            // Mostrar las primeras 5 filas para depuración
             for (let i = 0; i < Math.min(5, data.length); i++) {
                 addDebug(`Fila ${i}: ${JSON.stringify(data[i])}`, 'info');
             }
             
-            // Buscar la fila de encabezados
             let headerRowIndex = -1;
             let columnMapping = {};
             
@@ -405,14 +469,12 @@
                 const row = data[i];
                 if (!row || row.length === 0) continue;
                 
-                // Buscar encabezados conocidos
                 const rowStr = row.map(c => String(c || '').toLowerCase().trim()).join('|');
                 
                 if (rowStr.includes('partido') && rowStr.includes('equipo')) {
                     headerRowIndex = i;
                     addDebug(`✅ Encabezados encontrados en fila ${i}`, 'success');
                     
-                    // Mapear columnas
                     row.forEach((cell, idx) => {
                         const cellStr = String(cell || '').toLowerCase().trim();
                         if (cellStr === 'partido') columnMapping.id = idx;
@@ -431,13 +493,11 @@
                 return [];
             }
             
-            // Si no se encontraron columnas específicas, usar posiciones por defecto
             if (columnMapping.id === undefined) columnMapping.id = 0;
             if (columnMapping.team1 === undefined) columnMapping.team1 = 1;
             if (columnMapping.team2 === undefined) columnMapping.team2 = 4;
             if (columnMapping.phase === undefined) columnMapping.phase = 8;
             
-            // Procesar datos desde la fila siguiente a los encabezados
             const matches = [];
             let processedCount = 0;
             let skippedCount = 0;
@@ -449,7 +509,6 @@
                     continue;
                 }
                 
-                // Saltar filas de separadores (que contienen "---")
                 const rowStr = row.map(c => String(c || '')).join('');
                 if (rowStr.includes('---')) {
                     skippedCount++;
@@ -461,7 +520,6 @@
                 const team2 = row[columnMapping.team2] ? String(row[columnMapping.team2]).trim() : '';
                 const phase = row[columnMapping.phase] ? String(row[columnMapping.phase]).trim() : '';
                 
-                // Validar que sea un partido válido
                 if (isNaN(id) || !team1 || !team2) {
                     skippedCount++;
                     continue;
@@ -498,7 +556,6 @@
             addDebug('🔄 Intentando cargar Fixture.xlsx automáticamente...', 'info');
             
             try {
-                // Intentar diferentes rutas
                 const paths = ['Fixture.xlsx', './Fixture.xlsx', '/Fixture.xlsx'];
                 let response = null;
                 let usedPath = '';
@@ -536,10 +593,8 @@
                     throw new Error('No se encontraron partidos válidos en el archivo');
                 }
                 
-                // Ordenar por ID
                 matches.sort((a, b) => a.id - b.id);
                 
-                // Eliminar duplicados
                 const uniqueMatches = [];
                 const seenIds = new Set();
                 matches.forEach(m => {
@@ -626,7 +681,7 @@
             ROUNDS.forEach(round => {
                 const count = state.matches.filter(m => m.roundId === round.id).length;
                 if (count > 0) {
-                    html += `<span class="badge" style="background: var(--accent); color: var(--text); padding: 0.4rem 0.8rem;">
+                    html += `<span class="badge" style="background: var(--fifa-navy); color: var(--fifa-white); padding: 0.4rem 0.8rem; border: 1px solid var(--fifa-gold);">
                         ${round.icon} ${round.name}: ${count}
                     </span>`;
                 }
@@ -639,7 +694,7 @@
         function renderPredictionsUploads() {
             const container = document.getElementById('predictionsUploads');
             if (state.matches.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
                 return;
             }
 
@@ -754,7 +809,7 @@
         function renderPredictionsSummary() {
             const container = document.getElementById('predictionsSummary');
             if (state.matches.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">No hay datos para mostrar.</p>';
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center;">No hay datos para mostrar.</p>';
                 return;
             }
 
@@ -768,7 +823,7 @@
                     <thead><tr><th style="text-align:left;">Partido</th>${state.players.map(p => `<th>${p}</th>`).join('')}</tr></thead>
                     <tbody>`;
                 
-                matchesInRound.forEach(m => {
+                matchesInRound.slice(0, 10).forEach(m => {
                     html += `<tr><td class="match-name">${m.name}</td>`;
                     state.players.forEach(p => {
                         const pred = state.predictions[p] && 
@@ -776,12 +831,15 @@
                                     state.predictions[p][round.id][m.name];
                         html += pred ? 
                             `<td><strong>${pred.g1}</strong> - <strong>${pred.g2}</strong></td>` : 
-                            `<td style="color: var(--text-muted);">—</td>`;
+                            `<td style="color: var(--fifa-text-muted);">—</td>`;
                     });
                     html += '</tr>';
                 });
                 
                 html += '</tbody></table></div>';
+                if (matchesInRound.length > 10) {
+                    html += `<p style="text-align:center; color: var(--fifa-text-muted); font-size: 0.8rem; margin-top: 0.5rem;">... y ${matchesInRound.length - 10} partidos más</p>`;
+                }
             });
             
             container.innerHTML = html;
@@ -791,7 +849,7 @@
         function renderRealResultsInputs() {
             const container = document.getElementById('realResultsInputs');
             if (state.matches.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center;">Primero carga el Fixture.xlsx.</p>';
                 return;
             }
             let html = '';
@@ -942,7 +1000,7 @@
         function renderStandings() {
             const container = document.getElementById('standingsContainer');
             if (!state.resultsCalculated || Object.keys(state.groupStandings).length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados.</p>';
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center; padding: 2rem;">Aún no se han calculado resultados.</p>';
                 return;
             }
             let html = '';
@@ -958,18 +1016,18 @@
                     html += `<tr class="${index < 2 ? 'top-2' : ''}">
                         <td>${index + 1}. ${t.name}</td><td>${t.pj}</td><td>${t.pg}</td><td>${t.pe}</td>
                         <td>${t.pp}</td><td>${t.gf}</td><td>${t.gc}</td><td>${dgStr}</td>
-                        <td style="font-weight: 900; color: var(--gold);">${t.pts}</td></tr>`;
+                        <td style="font-family: var(--font-titles); font-weight: 700; font-size: 1.1rem; color: var(--fifa-gold);">${t.pts}</td></tr>`;
                 });
                 html += `</tbody></table></div>`;
             });
-            container.innerHTML = html || '<p style="text-align:center; color: var(--text-muted);">No hay datos de fase de grupos aún.</p>';
+            container.innerHTML = html || '<p style="text-align:center; color: var(--fifa-text-muted);">No hay datos de fase de grupos aún.</p>';
         }
 
         function renderComparison() {
             const statsContainer = document.getElementById('comparisonStats');
             const detailContainer = document.getElementById('comparisonDetail');
             if (!state.resultsCalculated) {
-                detailContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
+                detailContainer.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
                 return;
             }
             const totalMatches = Object.keys(state.realResults).filter(m => {
@@ -984,7 +1042,7 @@
                 <div class="stat-card"><div class="stat-value">${totalMatches}</div><div class="stat-label">Partidos evaluados</div></div>
                 <div class="stat-card"><div class="stat-value">${state.players.length}</div><div class="stat-label">Jugadores</div></div>
                 <div class="stat-card"><div class="stat-value">${maxScore}</div><div class="stat-label">Mejor puntaje</div></div>
-                <div class="stat-card"><div class="stat-value">${maxPlayer}</div><div class="stat-label">Líder</div></div>
+                <div class="stat-card"><div class="stat-value" style="font-size: 1.5rem;">${maxPlayer}</div><div class="stat-label">Líder</div></div>
             `;
             detailContainer.innerHTML = state.matches
                 .filter(m => state.realResults[m.name] && !isNaN(state.realResults[m.name].g1))
@@ -992,24 +1050,24 @@
                     const real = state.realResults[m.name];
                     return `
                         <div class="card" style="padding: 1rem; margin-bottom: 1rem;">
-                            <div style="font-weight: 700; text-align: center; margin-bottom: 0.8rem;">
-                                ${m.name} <span style="color: var(--gold);">| Resultado: ${real.g1} - ${real.g2}</span>
-                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">${m.roundName}</div>
+                            <div style="font-family: var(--font-titles); font-weight: 700; text-align: center; margin-bottom: 0.8rem; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">
+                                ${m.name} <span style="color: var(--fifa-gold);">| Resultado: ${real.g1} - ${real.g2}</span>
+                                <div style="font-size: 0.75rem; color: var(--fifa-text-muted); margin-top: 0.2rem; font-family: var(--font-body); text-transform: none;">${m.roundName}</div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
                                 ${state.players.map(p => {
                                     const detail = state.scores[p].details.find(d => d.match === m.name);
-                                    if (!detail) return `<div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;"><div style="font-size:0.8rem; color:var(--text-muted);">${p}</div><div>—</div></div>`;
+                                    if (!detail) return `<div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;"><div style="font-size:0.8rem; color:var(--fifa-text-muted);">${p}</div><div>—</div></div>`;
                                     let badgeClass = 'badge-fail';
                                     if (detail.type === 'exact') badgeClass = 'badge-exact';
                                     if (detail.type === 'diff') badgeClass = 'badge-diff';
                                     if (detail.type === 'winner') badgeClass = 'badge-winner';
                                     return `
                                         <div style="background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:8px; min-width:100px; text-align:center;">
-                                            <div style="font-size:0.8rem; color:var(--text-muted);">${p}</div>
-                                            <div style="font-weight:800; font-size:1.1rem;">${detail.prediction}</div>
+                                            <div style="font-size:0.8rem; color:var(--fifa-text-muted);">${p}</div>
+                                            <div style="font-family: var(--font-titles); font-weight:700; font-size:1.2rem;">${detail.prediction}</div>
                                             <span class="badge ${badgeClass}" style="margin-top:0.3rem;">${detail.description}</span>
-                                            <div style="color:var(--gold); font-weight:700; margin-top:0.2rem;">+${detail.points} pts</div>
+                                            <div style="color:var(--fifa-gold); font-family: var(--font-titles); font-weight:700; margin-top:0.2rem; font-size: 1.1rem;">+${detail.points} pts</div>
                                         </div>
                                     `;
                                 }).join('')}
@@ -1022,7 +1080,7 @@
         function renderRanking() {
             const container = document.getElementById('rankingContainer');
             if (!state.resultsCalculated) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center; padding: 2rem;">Primero calcula los resultados.</p>';
                 return;
             }
             const sorted = [...state.players].sort((a, b) => state.scores[b].total - state.scores[a].total);
