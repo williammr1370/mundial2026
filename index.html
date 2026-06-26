@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🏆 Quiniela Mundial 26 - Juan, Ricardo y Willy</title>
     
-    <!-- Fuentes oficiales estilo FWC 26 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Librería para leer Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         :root {
-            /* Paleta de Colores Oficial Inspirada en FIFA World Cup 26 */
             --fifa-dark: #1A1A2E;
             --fifa-blue: #16213E;
             --fifa-navy: #0F3460;
@@ -28,7 +25,6 @@
             --fifa-card-bg: #1E2A45;
             --fifa-border: #2A3A5C;
             
-            /* Tipografía estilo FWC 26 */
             --font-titles: 'Rajdhani', sans-serif;
             --font-body: 'Barlow', sans-serif;
         }
@@ -125,6 +121,8 @@
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(226, 183, 20, 0.4); }
         .btn-success { background: linear-gradient(135deg, var(--fifa-green), #00a884); color: white; }
         .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-danger { background: linear-gradient(135deg, var(--fifa-red), #c0392b); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; }
         .btn-small { padding: 0.4rem 1rem; font-size: 0.8rem; }
         .btn-group { display: flex; gap: 0.7rem; flex-wrap: wrap; }
 
@@ -189,6 +187,7 @@
         .toast-success { background: var(--fifa-green); color: white; }
         .toast-error { background: var(--fifa-red); color: white; }
         .toast-info { background: var(--fifa-navy); color: white; border: 1px solid var(--fifa-gold); }
+        .toast-warning { background: #f39c12; color: white; }
 
         .group-title {
             font-family: var(--font-titles);
@@ -206,6 +205,10 @@
 
         .auto-load-hint {
             background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #85c1e9;
+            padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .warning-hint {
+            background: rgba(243, 156, 18, 0.15); border: 1px solid #f39c12; color: #f8c471;
             padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
         }
         .debug-log {
@@ -237,6 +240,21 @@
         .round-card h4 { font-family: var(--font-titles); font-size: 1rem; margin-bottom: 0.5rem; color: var(--fifa-gold); text-transform: uppercase; letter-spacing: 1px; }
         .round-card .round-count { font-size: 0.8rem; color: var(--fifa-text-muted); margin-bottom: 0.8rem; }
 
+        .team-mapping-row {
+            display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center;
+            padding: 1rem; background: rgba(0,0,0,0.15); border-radius: 8px; margin-bottom: 0.5rem;
+        }
+        .team-mapping-original {
+            font-family: var(--font-titles); font-weight: 600; color: var(--fifa-text-muted);
+            padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 4px; text-align: center;
+        }
+        .team-mapping-arrow { color: var(--fifa-gold); font-size: 1.5rem; font-weight: 700; }
+        .team-mapping-new {
+            padding: 0.5rem 1rem; border: 2px solid var(--fifa-border); border-radius: 4px;
+            background: rgba(0,0,0,0.3); color: var(--fifa-white); font-family: var(--font-body);
+        }
+        .team-mapping-new:focus { outline: none; border-color: var(--fifa-gold); }
+
         @media (max-width: 600px) {
             .header h1 { font-size: 1.5rem; }
             .container { padding: 1rem; }
@@ -245,6 +263,7 @@
             .match-row { grid-template-columns: 1fr; gap: 0.3rem; text-align: center; }
             .match-team.home, .match-team.away { text-align: center; }
             .round-grid { grid-template-columns: 1fr; }
+            .team-mapping-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -259,6 +278,7 @@
         <button class="nav-tab" onclick="showSection('predictions')">📝 Pronósticos</button>
         <button class="nav-tab" onclick="showSection('realResults')">⚽ Resultados Reales</button>
         <button class="nav-tab" onclick="showSection('standings')">📊 Tabla de Posiciones</button>
+        <button class="nav-tab" onclick="showSection('teamEditor')">🔧 Editor de Equipos</button>
         <button class="nav-tab" onclick="showSection('comparison')">🔍 Comparación</button>
         <button class="nav-tab" onclick="showSection('ranking')">🏆 Ranking</button>
     </div>
@@ -301,6 +321,21 @@
                         <span style="color:var(--fifa-text-muted); font-size:0.8rem; flex:2;">Acertar quién gana (o empate)</span>
                         <input type="number" id="ruleWinner" value="1" min="0" max="10" style="width:60px; text-align:center;">
                     </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="icon">💾</span> Respaldo de Datos</div>
+                <p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Exporta todos los datos (fixture, pronósticos, resultados) a un archivo JSON para respaldo, o impórtalos desde un archivo previo.
+                </p>
+                <div class="btn-group">
+                    <button class="btn btn-primary btn-small" onclick="exportBackup()">📤 Exportar Respaldo</button>
+                    <label class="btn btn-info btn-small" style="cursor: pointer;">
+                        📥 Importar Respaldo
+                        <input type="file" accept=".json" onchange="importBackup(event)" style="display: none;">
+                    </label>
+                    <button class="btn btn-danger btn-small" onclick="resetAllData()">🗑️ Borrar Todo</button>
                 </div>
             </div>
         </div>
@@ -349,6 +384,25 @@
             </div>
         </div>
 
+        <!-- TEAM EDITOR SECTION -->
+        <div class="section" id="section-teamEditor">
+            <div class="card">
+                <div class="card-title"><span class="icon">🔧</span> Editor de Equipos</div>
+                <p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Reemplaza los términos genéricos (como "1ro Grupo E", "Ganador Partido 74") por los nombres reales de los equipos clasificados.
+                </p>
+                <div class="warning-hint">
+                    ⚠️ <strong>Importante:</strong> Al aplicar los cambios, los pronósticos y resultados reales se migrarán automáticamente a los nuevos nombres. Se creará un respaldo automático antes de aplicar cambios.
+                </div>
+                <div id="teamMappingsContainer"></div>
+                <div class="btn-group" style="margin-top: 1.5rem;">
+                    <button class="btn btn-primary" onclick="applyTeamMappings()">✅ Aplicar Cambios</button>
+                    <button class="btn btn-info btn-small" onclick="autoSuggestFromStandings()">💡 Sugerir desde Tablas</button>
+                    <button class="btn btn-warning btn-small" onclick="resetTeamMappings()">🔄 Resetear Mapeos</button>
+                </div>
+            </div>
+        </div>
+
         <!-- COMPARISON SECTION -->
         <div class="section" id="section-comparison">
             <div class="card">
@@ -370,7 +424,6 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ==================== CONSTANTES DE FASES ====================
         const ROUNDS = [
             { id: 'round1', name: '1ra Ronda Grupos', range: [1, 24], icon: '🏟️' },
             { id: 'round2', name: '2da Ronda Grupos', range: [25, 48], icon: '🏟️' },
@@ -382,7 +435,6 @@
             { id: 'final', name: 'Final y Tercer Puesto', range: [103, 104], icon: '🏆' }
         ];
 
-        // ==================== ESTADO GLOBAL ====================
         let state = {
             players: ['Juan', 'Ricardo', 'Willy'],
             matches: [],
@@ -390,10 +442,10 @@
             realResults: {},
             scores: {},
             groupStandings: {},
+            teamMappings: {},
             resultsCalculated: false
         };
 
-        // ==================== DEBUG LOG ====================
         let debugMessages = [];
         function addDebug(msg, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
@@ -416,7 +468,6 @@
             logEl.style.display = logEl.style.display === 'none' ? 'block' : 'none';
         }
 
-        // ==================== CONEXIÓN CON RENDER/TURSO ====================
         async function saveToCloud() {
             try {
                 await fetch('/api/save', {
@@ -444,7 +495,6 @@
             }
         }
 
-        // ==================== UTILIDAD: OBTENER RONDA POR ID ====================
         function getRoundByMatchId(id) {
             for (const round of ROUNDS) {
                 if (id >= round.range[0] && id <= round.range[1]) {
@@ -454,13 +504,8 @@
             return null;
         }
 
-        // ==================== LECTOR INTELIGENTE DE EXCEL ====================
         function parseFixtureData(data) {
             addDebug(`📊 Archivo leído. Total de filas: ${data.length}`, 'info');
-            
-            for (let i = 0; i < Math.min(5, data.length); i++) {
-                addDebug(`Fila ${i}: ${JSON.stringify(data[i])}`, 'info');
-            }
             
             let headerRowIndex = -1;
             let columnMapping = {};
@@ -483,7 +528,6 @@
                         else if (cellStr === 'fase') columnMapping.phase = idx;
                     });
                     
-                    addDebug(`Mapeo de columnas: ${JSON.stringify(columnMapping)}`, 'info');
                     break;
                 }
             }
@@ -531,6 +575,7 @@
                 matches.push({
                     id,
                     name: matchName,
+                    originalName: matchName, // Guardar el nombre original
                     team1,
                     team2,
                     group: phase,
@@ -541,12 +586,9 @@
             }
             
             addDebug(`✅ Partidos procesados: ${processedCount}`, 'success');
-            addDebug(`⏭️ Filas saltadas: ${skippedCount}`, 'info');
-            
             return matches;
         }
 
-        // ==================== CARGA AUTOMÁTICA ====================
         async function loadFixtureAutomatically() {
             if (state.matches.length > 0) {
                 addDebug('ℹ️ Ya hay partidos cargados, omitiendo carga automática', 'info');
@@ -558,14 +600,11 @@
             try {
                 const paths = ['Fixture.xlsx', './Fixture.xlsx', '/Fixture.xlsx'];
                 let response = null;
-                let usedPath = '';
                 
                 for (const path of paths) {
                     try {
-                        addDebug(`Intentando ruta: ${path}`, 'info');
                         response = await fetch(path);
                         if (response.ok) {
-                            usedPath = path;
                             addDebug(`✅ Archivo encontrado en: ${path}`, 'success');
                             break;
                         }
@@ -575,22 +614,18 @@
                 }
                 
                 if (!response || !response.ok) {
-                    throw new Error('No se pudo acceder al archivo Fixture.xlsx en ninguna ruta');
+                    throw new Error('No se pudo acceder al archivo Fixture.xlsx');
                 }
                 
                 const arrayBuffer = await response.arrayBuffer();
-                addDebug(`📦 Tamaño del archivo: ${arrayBuffer.byteLength} bytes`, 'info');
-                
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                addDebug(`📑 Hojas encontradas: ${workbook.SheetNames.join(', ')}`, 'info');
-                
                 const sheet = workbook.Sheets[workbook.SheetNames[0]];
                 const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
                 
                 const matches = parseFixtureData(data);
                 
                 if (matches.length === 0) {
-                    throw new Error('No se encontraron partidos válidos en el archivo');
+                    throw new Error('No se encontraron partidos válidos');
                 }
                 
                 matches.sort((a, b) => a.id - b.id);
@@ -610,28 +645,28 @@
                 document.getElementById('matchesFileUpload').classList.add('has-file');
                 renderMatchesList();
                 renderPredictionsUploads();
+                saveToCloud();
                 showToast(`Calendario cargado: ${uniqueMatches.length} partidos`, 'success');
                 
             } catch (error) {
-                addDebug(`❌ Error en carga automática: ${error.message}`, 'error');
+                addDebug(`❌ Error: ${error.message}`, 'error');
                 document.getElementById('matchesFileName').textContent = '⚠️ Carga automática falló. Usa el botón de arriba.';
-                showToast('Usa el botón para subir el archivo manualmente', 'error');
             }
         }
 
-        // ==================== CARGA MANUAL ====================
         function loadMatchesFile(event) {
             const file = event.target.files[0];
             if (!file) return;
             
-            addDebug(`📁 Archivo seleccionado: ${file.name} (${file.size} bytes)`, 'info');
+            if (!confirm('⚠️ Esto reemplazará el fixture actual. ¿Continuar?')) {
+                event.target.value = '';
+                return;
+            }
             
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const workbook = XLSX.read(e.target.result, { type: 'binary' });
-                    addDebug(`📑 Hojas: ${workbook.SheetNames.join(', ')}`, 'info');
-                    
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
                     
@@ -654,6 +689,13 @@
                     });
                     
                     state.matches = uniqueMatches;
+                    // Limpiar datos huérfanos
+                    state.predictions = {};
+                    state.realResults = {};
+                    state.scores = {};
+                    state.groupStandings = {};
+                    state.teamMappings = {};
+                    state.resultsCalculated = false;
                     
                     document.getElementById('matchesFileName').textContent = `✅ ${file.name} (${uniqueMatches.length} partidos)`;
                     document.getElementById('matchesFileUpload').classList.add('has-file');
@@ -663,7 +705,6 @@
                     showToast(`${uniqueMatches.length} partidos cargados`, 'success');
                     
                 } catch (err) {
-                    addDebug(`❌ Error al leer: ${err.message}`, 'error');
                     showToast('Error al leer el archivo', 'error');
                 }
             };
@@ -690,7 +731,6 @@
             container.innerHTML = html;
         }
 
-        // ==================== PREDICTIONS (POR FASES) ====================
         function renderPredictionsUploads() {
             const container = document.getElementById('predictionsUploads');
             if (state.matches.length === 0) {
@@ -845,7 +885,6 @@
             container.innerHTML = html;
         }
 
-        // ==================== REAL RESULTS ====================
         function renderRealResultsInputs() {
             const container = document.getElementById('realResultsInputs');
             if (state.matches.length === 0) {
@@ -882,7 +921,285 @@
             saveToCloud();
         }
 
-        // ==================== CALCULATE ALL ====================
+        // ==================== TEAM EDITOR (CORREGIDO) ====================
+        function extractGenericTerms() {
+            const terms = new Set();
+            const patterns = [
+                /1ro Grupo ([A-L])/g,
+                /2do Grupo ([A-L])/g,
+                /3ro Grupo ([A-L]+)/g,
+                /Ganador Partido (\d+)/g,
+                /Perdedor Partido (\d+)/g
+            ];
+            
+            state.matches.forEach(m => {
+                // Usar el nombre original si existe, sino el actual
+                const nameToCheck = m.originalName || m.name;
+                patterns.forEach(pattern => {
+                    let match;
+                    while ((match = pattern.exec(nameToCheck)) !== null) {
+                        terms.add(match[0]);
+                    }
+                    pattern.lastIndex = 0;
+                });
+            });
+            
+            return Array.from(terms).sort();
+        }
+
+        function renderTeamMappings() {
+            const container = document.getElementById('teamMappingsContainer');
+            const terms = extractGenericTerms();
+            
+            if (terms.length === 0) {
+                container.innerHTML = '<p style="color: var(--fifa-text-muted); text-align: center; padding: 2rem;">No hay términos genéricos para reemplazar.</p>';
+                return;
+            }
+            
+            let html = '<p style="color: var(--fifa-text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Se encontraron <strong>' + terms.length + '</strong> términos genéricos:</p>';
+            
+            terms.forEach(term => {
+                const currentValue = state.teamMappings[term] || '';
+                html += `
+                    <div class="team-mapping-row">
+                        <div class="team-mapping-original">${term}</div>
+                        <div class="team-mapping-arrow">→</div>
+                        <input type="text" class="team-mapping-new" 
+                               id="mapping-${sanitizeId(term)}" 
+                               value="${currentValue}" 
+                               placeholder="Ej: Brasil, Argentina, etc.">
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function applyTeamMappings() {
+            const terms = extractGenericTerms();
+            
+            if (terms.length === 0) {
+                showToast('No hay términos para aplicar', 'info');
+                return;
+            }
+            
+            if (!confirm('⚠️ Se aplicarán los cambios a todos los partidos. Los pronósticos y resultados se migrarán automáticamente. ¿Continuar?')) {
+                return;
+            }
+            
+            // Crear respaldo automático antes de aplicar cambios
+            const backupName = `respaldo_antes_de_mapeo_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+            const backupData = JSON.stringify(state, null, 2);
+            const blob = new Blob([backupData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = backupName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`💾 Respaldo automático creado: ${backupName}`, 'info');
+            
+            // Construir mapa de reemplazo de nombres de partidos
+            const matchNameUpdates = {}; // { oldName: newName }
+            
+            state.matches.forEach(m => {
+                const originalName = m.originalName || m.name;
+                let newName = originalName;
+                
+                terms.forEach(term => {
+                    const input = document.getElementById('mapping-' + sanitizeId(term));
+                    if (input && input.value.trim()) {
+                        const newValue = input.value.trim();
+                        state.teamMappings[term] = newValue;
+                        
+                        if (newName.includes(term)) {
+                            newName = newName.replace(term, newValue);
+                        }
+                    }
+                });
+                
+                if (newName !== originalName) {
+                    matchNameUpdates[originalName] = newName;
+                }
+            });
+            
+            // Migrar pronósticos a los nuevos nombres
+            let migratedPredictions = 0;
+            Object.keys(state.predictions).forEach(player => {
+                Object.keys(state.predictions[player]).forEach(roundId => {
+                    const roundPredictions = state.predictions[player][roundId];
+                    const newRoundPredictions = {};
+                    
+                    Object.keys(roundPredictions).forEach(oldMatchName => {
+                        if (matchNameUpdates[oldMatchName]) {
+                            newRoundPredictions[matchNameUpdates[oldMatchName]] = roundPredictions[oldMatchName];
+                            migratedPredictions++;
+                        } else {
+                            newRoundPredictions[oldMatchName] = roundPredictions[oldMatchName];
+                        }
+                    });
+                    
+                    state.predictions[player][roundId] = newRoundPredictions;
+                });
+            });
+            
+            // Migrar resultados reales a los nuevos nombres
+            let migratedResults = 0;
+            const newRealResults = {};
+            Object.keys(state.realResults).forEach(oldMatchName => {
+                if (matchNameUpdates[oldMatchName]) {
+                    newRealResults[matchNameUpdates[oldMatchName]] = state.realResults[oldMatchName];
+                    migratedResults++;
+                } else {
+                    newRealResults[oldMatchName] = state.realResults[oldMatchName];
+                }
+            });
+            state.realResults = newRealResults;
+            
+            // Actualizar los nombres de los partidos
+            state.matches.forEach(m => {
+                const originalName = m.originalName || m.name;
+                if (matchNameUpdates[originalName]) {
+                    const newName = matchNameUpdates[originalName];
+                    const parts = newName.split(' vs ');
+                    m.team1 = parts[0];
+                    m.team2 = parts[1];
+                    m.name = newName;
+                    if (!m.originalName) m.originalName = originalName;
+                }
+            });
+            
+            saveToCloud();
+            renderMatchesList();
+            renderRealResultsInputs();
+            renderPredictionsUploads();
+            renderTeamMappings();
+            showToast(`✅ Cambios aplicados. ${migratedPredictions} pronósticos y ${migratedResults} resultados migrados.`, 'success');
+        }
+
+        function autoSuggestFromStandings() {
+            if (!state.resultsCalculated || Object.keys(state.groupStandings).length === 0) {
+                showToast('Primero calcula los resultados de la fase de grupos', 'error');
+                return;
+            }
+            
+            let suggestedCount = 0;
+            
+            'ABCDEFGHIJKL'.split('').forEach(g => {
+                const teams = state.groupStandings[g];
+                if (teams && teams.length >= 2) {
+                    const first = teams[0].name;
+                    const second = teams[1].name;
+                    
+                    const term1 = `1ro Grupo ${g}`;
+                    const term2 = `2do Grupo ${g}`;
+                    
+                    const input1 = document.getElementById('mapping-' + sanitizeId(term1));
+                    if (input1 && !input1.value) {
+                        input1.value = first;
+                        suggestedCount++;
+                    }
+                    
+                    const input2 = document.getElementById('mapping-' + sanitizeId(term2));
+                    if (input2 && !input2.value) {
+                        input2.value = second;
+                        suggestedCount++;
+                    }
+                }
+            });
+            
+            showToast(`💡 ${suggestedCount} sugerencias aplicadas`, 'success');
+        }
+
+        function resetTeamMappings() {
+            if (!confirm('⚠️ Esto reseteará todos los mapeos de equipos. Los nombres de los partidos volverán a los originales. ¿Continuar?')) {
+                return;
+            }
+            
+            state.teamMappings = {};
+            
+            // Restaurar nombres originales
+            state.matches.forEach(m => {
+                if (m.originalName) {
+                    const parts = m.originalName.split(' vs ');
+                    m.team1 = parts[0];
+                    m.team2 = parts[1];
+                    m.name = m.originalName;
+                }
+            });
+            
+            saveToCloud();
+            renderMatchesList();
+            renderRealResultsInputs();
+            renderPredictionsUploads();
+            renderTeamMappings();
+            showToast('✅ Mapeos reseteados', 'success');
+        }
+
+        // ==================== BACKUP/RESTORE ====================
+        function exportBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `quiniela_respaldo_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showToast('💾 Respaldo descargado', 'success');
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!confirm('⚠️ Esto reemplazará TODOS los datos actuales con los del respaldo. ¿Continuar?')) {
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    state = { ...state, ...imported };
+                    saveToCloud();
+                    renderMatchesList();
+                    renderPredictionsUploads();
+                    showToast('✅ Datos importados correctamente', 'success');
+                } catch (err) {
+                    showToast('❌ Archivo no válido', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetAllData() {
+            if (!confirm('⚠️ ¿Estás seguro? Esto borrará TODOS los datos (fixture, pronósticos, resultados). No se puede deshacer.')) {
+                return;
+            }
+            if (!confirm('⚠️ ÚLTIMA ADVERTENCIA: Se borrarán todos los datos permanentemente. ¿Continuar?')) {
+                return;
+            }
+            
+            state = {
+                players: ['Juan', 'Ricardo', 'Willy'],
+                matches: [],
+                predictions: {},
+                realResults: {},
+                scores: {},
+                groupStandings: {},
+                teamMappings: {},
+                resultsCalculated: false
+            };
+            
+            saveToCloud();
+            renderMatchesList();
+            renderPredictionsUploads();
+            document.getElementById('matchesFileName').textContent = '';
+            document.getElementById('matchesFileUpload').classList.remove('has-file');
+            showToast('🗑️ Todos los datos han sido borrados', 'warning');
+        }
+
         function calculateAll() {
             const rules = getRules();
             const matchesWithResult = state.matches.filter(m => {
@@ -996,7 +1313,6 @@
             };
         }
 
-        // ==================== RENDER SECTIONS ====================
         function renderStandings() {
             const container = document.getElementById('standingsContainer');
             if (!state.resultsCalculated || Object.keys(state.groupStandings).length === 0) {
@@ -1110,7 +1426,6 @@
             }).join('');
         }
 
-        // ==================== UTILITIES ====================
         function sanitizeId(str) { return str.replace(/[^a-zA-Z0-9]/g, '_'); }
         
         function showSection(name) {
@@ -1120,6 +1435,7 @@
             event.target.classList.add('active');
             if (name === 'realResults') renderRealResultsInputs();
             if (name === 'standings') renderStandings();
+            if (name === 'teamEditor') renderTeamMappings();
             if (name === 'comparison') renderComparison();
             if (name === 'ranking') renderRanking();
             if (name === 'predictions') renderPredictionsUploads();
@@ -1132,15 +1448,10 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // ==================== INICIALIZACIÓN ====================
         loadFromCloud().then(() => {
-            init();
+            renderPredictionsUploads();
             loadFixtureAutomatically();
         });
-
-        function init() {
-            renderPredictionsUploads();
-        }
     </script>
 </body>
 </html>
