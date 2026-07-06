@@ -470,28 +470,58 @@
 
         async function saveToCloud() {
             try {
-                await fetch('/api/save', {
+                const dataSize = JSON.stringify(state).length;
+                console.log(`💾 Guardando en la nube (${dataSize} bytes)...`);
+                
+                const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(state)
                 });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Datos guardados correctamente en la nube');
+                showToast(`💾 Guardado en la nube (${dataSize} bytes)`, 'success');
             } catch (err) {
-                console.error('Error al guardar en la nube:', err);
+                console.error('❌ ERROR al guardar en la nube:', err);
+                showToast(`❌ Error al guardar: ${err.message}`, 'error');
             }
         }
 
         async function loadFromCloud() {
             try {
+                console.log('📥 Cargando datos desde la nube...');
                 const response = await fetch('/api/load');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('📥 Datos recibidos de la nube:', data);
+                
                 if (data && Object.keys(data).length > 0) {
                     state = { ...state, ...data };
+                    console.log('✅ Estado actualizado con datos de la nube');
+                    console.log('📊 Resumen:', {
+                        matches: state.matches?.length || 0,
+                        predictions: Object.keys(state.predictions || {}).length,
+                        realResults: Object.keys(state.realResults || {}).length
+                    });
                     renderMatchesList();
                     renderPredictionsUploads();
                     showToast('✅ Datos sincronizados desde la base de datos', 'success');
+                } else {
+                    console.log('⚠️ No hay datos en la nube');
                 }
             } catch (err) {
-                console.error('Error al cargar de la nube:', err);
+                console.error('❌ ERROR al cargar de la nube:', err);
+                showToast(`❌ Error al cargar: ${err.message}`, 'error');
             }
         }
 
