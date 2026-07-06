@@ -1177,8 +1177,8 @@
             downloadAnchorNode.remove();
             showToast('💾 Respaldo descargado', 'success');
         }
-
-        function importBackup(event) {
+        
+        async function importBackup(event) {
             const file = event.target.files[0];
             if (!file) return;
             
@@ -1188,21 +1188,35 @@
             }
             
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
+                    console.log('📥 Importando respaldo...');
                     const imported = JSON.parse(e.target.result);
                     state = { ...state, ...imported };
-                    saveToCloud();
+                    
+                    console.log('✅ Datos importados localmente');
+                    console.log('📊 Resumen:', {
+                        matches: state.matches?.length || 0,
+                        predictions: Object.keys(state.predictions || {}).length,
+                        realResults: Object.keys(state.realResults || {}).length
+                    });
+                    
                     renderMatchesList();
                     renderPredictionsUploads();
-                    showToast('✅ Datos importados correctamente', 'success');
+                    
+                    // IMPORTANTE: Guardar en la nube después de importar
+                    console.log('💾 Guardando datos importados en la nube...');
+                    await saveToCloud();
+                    
+                    showToast('✅ Datos importados y guardados en la nube', 'success');
                 } catch (err) {
+                    console.error('❌ Error al importar:', err);
                     showToast('❌ Archivo no válido', 'error');
                 }
             };
             reader.readAsText(file);
         }
-
+        
         function resetAllData() {
             if (!confirm('⚠️ ¿Estás seguro? Esto borrará TODOS los datos (fixture, pronósticos, resultados). No se puede deshacer.')) {
                 return;
